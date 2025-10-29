@@ -10,7 +10,7 @@ TOON (Token-Oriented Object Notation) is a compact format for LLMs, using **30-6
 
 **Example - Same data, different size:**
 ```rust
-// JSON (191 chars)
+// JSON (171 chars)
 [
   {
     "id":1,
@@ -26,7 +26,7 @@ TOON (Token-Oriented Object Notation) is a compact format for LLMs, using **30-6
   }
 ]
 
-// TOON (83 chars - 56% smaller)
+// TOON (86 chars - 50% smaller)
 [2]{active,email,id,name}:
   true,alice@example.com,1,Alice
   true,bob@example.com,2,Bob

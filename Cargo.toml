@@ -1,9 +1,9 @@
 [package]
 name = "serde_toon"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
 authors = ["Hxphsts <hxphsts@kernelx.ai>"]
-description = "A Serde-compatible TOON (Token-Oriented Object Notation) serialization library optimized for LLM token efficiency"
+description = "A Serde-compatible TOON (Token-Oriented Object Notation) serialization library"
 readme = "README.md"
 homepage = "https://github.com/hxphsts/serde_toon"
 repository = "https://github.com/hxphsts/serde_toon"

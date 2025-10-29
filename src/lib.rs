@@ -112,7 +112,7 @@
 //! ## Format Specification
 //!
 //! For the complete TOON format specification, see:
-//! <https://github.com/hxphsts/toon-specification>
+//! <https://github.com/johannschopplich/toon>
 //!
 //! ## Examples
 //!
