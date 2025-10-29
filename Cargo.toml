@@ -1,0 +1,62 @@
+[package]
+name = "serde_toon"
+version = "0.1.0"
+edition = "2021"
+authors = ["Hxphsts <hxphsts@kernelx.ai>"]
+description = "A Serde-compatible TOON (Token-Oriented Object Notation) serialization library optimized for LLM token efficiency"
+readme = "README.md"
+homepage = "https://github.com/hxphsts/serde_toon"
+repository = "https://github.com/hxphsts/serde_toon"
+documentation = "https://docs.rs/serde_toon"
+license = "MIT OR Apache-2.0"
+keywords = ["serde", "serialization", "toon", "llm", "token-efficient"]
+categories = ["encoding", "parser-implementations", "data-structures"]
+rust-version = "1.70"
+
+[package.metadata.docs.rs]
+all-features = true
+rustdoc-args = ["--cfg", "docsrs"]
+
+[dependencies]
+serde = { version = "1.0", features = ["derive"] }
+indexmap = "2.0"
+chrono = { version = "0.4", features = ["serde"] }
+num-bigint = { version = "0.4", features = ["serde"] }
+thiserror = "1.0"
+
+[dev-dependencies]
+serde_json = "1.0"
+proptest = "1.4"
+criterion = "0.5"
+
+[lib]
+name = "serde_toon"
+path = "src/lib.rs"
+
+[[example]]
+name = "simple"
+path = "examples/simple.rs"
+
+[[example]]
+name = "macro"
+path = "examples/macro.rs"
+
+[[example]]
+name = "tabular_arrays"
+path = "examples/tabular_arrays.rs"
+
+[[example]]
+name = "dynamic_values"
+path = "examples/dynamic_values.rs"
+
+[[example]]
+name = "custom_options"
+path = "examples/custom_options.rs"
+
+[[example]]
+name = "token_efficiency"
+path = "examples/token_efficiency.rs"
+
+[[bench]]
+name = "serialization"
+harness = false

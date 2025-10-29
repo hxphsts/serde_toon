@@ -1,0 +1,14 @@
+# Rune Configuration File
+
+parse:
+  # Default path to parse (relative to repository root)
+  path: .
+
+  # Comma-separated glob patterns for files to include
+  # Example:
+  include:
+    - "**/src/**/*.rs"
+
+  # Comma-separated glob patterns for files to ignore
+  # Example:
+  exclude: "**/tests/*,*.lock,.cursor*,.rune*,.gitignore,rustfmt.toml"
