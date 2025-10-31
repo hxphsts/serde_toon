@@ -26,20 +26,20 @@ fn main() -> Result<(), Box<dyn Error>> {
         users: vec![
             User {
                 id: 1,
-                name: "Alice Johnson".to_string(),
-                email: "alice@example.com".to_string(),
+                name: "Alice Johnson".into(),
+                email: "alice@example.com".into(),
                 active: true,
             },
             User {
                 id: 2,
-                name: "Bob Smith".to_string(),
-                email: "bob@example.com".to_string(),
+                name: "Bob Smith".into(),
+                email: "bob@example.com".into(),
                 active: true,
             },
             User {
                 id: 3,
-                name: "Charlie Brown".to_string(),
-                email: "charlie@example.com".to_string(),
+                name: "Charlie Brown".into(),
+                email: "charlie@example.com".into(),
                 active: false,
             },
         ],

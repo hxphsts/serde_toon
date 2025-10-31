@@ -17,13 +17,13 @@ fn main() -> Result<(), Box<dyn Error>> {
     let users = vec![
         User {
             id: 42,
-            name: "Alice Johnson".to_string(),
-            email: "alice@example.com".to_string(),
+            name: "Alice Johnson".into(),
+            email: "alice@example.com".into(),
         },
         User {
             id: 43,
-            name: "Bob Smith".to_string(),
-            email: "bob@example.com".to_string(),
+            name: "Bob Smith".into(),
+            email: "bob@example.com".into(),
         },
     ];
 

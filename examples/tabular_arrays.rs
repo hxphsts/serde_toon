@@ -17,20 +17,20 @@ struct Product {
 fn main() -> Result<(), Box<dyn Error>> {
     let products = vec![
         Product {
-            sku: "WIDGET-001".to_string(),
-            name: "Super Widget".to_string(),
+            sku: "WIDGET-001".into(),
+            name: "Super Widget".into(),
             price: 29.99,
             in_stock: true,
         },
         Product {
-            sku: "GADGET-002".to_string(),
-            name: "Mega Gadget".to_string(),
+            sku: "GADGET-002".into(),
+            name: "Mega Gadget".into(),
             price: 49.99,
             in_stock: false,
         },
         Product {
-            sku: "TOOL-003".to_string(),
-            name: "Ultra Tool".to_string(),
+            sku: "TOOL-003".into(),
+            name: "Ultra Tool".into(),
             price: 19.99,
             in_stock: true,
         },

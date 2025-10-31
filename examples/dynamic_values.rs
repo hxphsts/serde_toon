@@ -42,8 +42,8 @@ fn main() -> Result<(), Box<dyn Error>> {
     // Convert existing struct to Value
     let user = User {
         id: 123,
-        name: "Alice".to_string(),
-        roles: vec!["admin".to_string(), "developer".to_string()],
+        name: "Alice".into(),
+        roles: vec!["admin".into(), "developer".into()],
     };
 
     let user_value = to_value(&user)?;

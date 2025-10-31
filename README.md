@@ -6,40 +6,40 @@ A Serde-compatible [TOON](https://github.com/johannschopplich/toon) serializatio
 
 ## What is TOON?
 
-TOON (Token-Oriented Object Notation) is a compact format for LLMs, using **30-60% fewer tokens than JSON**.
+TOON (Token-Oriented Object Notation) is a compact serialization format optimized for LLMs, using **30-60% fewer tokens than JSON**.
 
-**Example - Same data, different size:**
+**Example - Same data, different sizes:**
 ```rust
-// JSON (171 chars)
+// JSON: 171 characters
 [
   {
-    "id":1,
-    "name":"Alice",
-     "email":"alice@example.com",
-     "active":true
+    "id": 1,
+    "name": "Alice",
+    "email": "alice@example.com",
+    "active": true
   },
   {
-    "id":2,
-    "name":"Bob",
-    "email":"bob@example.com",
-    "active":true
+    "id": 2,
+    "name": "Bob",
+    "email": "bob@example.com",
+    "active": true
   }
 ]
 
-// TOON (86 chars - 50% smaller)
+// TOON: 86 characters (50% reduction)
 [2]{active,email,id,name}:
   true,alice@example.com,1,Alice
   true,bob@example.com,2,Bob
 ```
 
-*See [`examples/token_efficiency.rs`](examples/token_efficiency.rs)*
+*See [`examples/token_efficiency.rs`](examples/token_efficiency.rs).*
 
 ## Quick Start
 
 ```toml
 [dependencies]
-serde_toon = "0.1"
 serde = { version = "1.0", features = ["derive"] }
+serde_toon = "0.2"
 ```
 
 ```rust
@@ -47,19 +47,40 @@ use serde::{Deserialize, Serialize};
 use serde_toon::{to_string, from_str};
 
 #[derive(Serialize, Deserialize)]
-struct User { id: u32, name: String }
+struct User {
+    id: u32,
+    name: String,
+}
 
 let user = User { id: 123, name: "Alice".into() };
-let toon = to_string(&user)?;
-let back: User = from_str(&toon)?;
+let toon = to_string(&user)?; // Serialize to TOON
+let back: User = from_str(&toon)?; // Deserialize from TOON
 ```
+
+## Dynamic Values
+
+```rust
+use serde_toon::{toon, to_string};
+
+let data = toon!({
+    "users": [
+        {"id": 1, "name": "Alice"},
+        {"id": 2, "name": "Bob"}
+    ],
+    "active": true
+}); // toon! macro -> serde_toon::Value
+
+let serialized = to_string(&data)?;
+```
+
+*See [`examples/dynamic_values.rs`](examples/dynamic_values.rs), [`examples/macro.rs`](examples/macro.rs).*
 
 ## Features
 
 - Full Serde integration
 - Zero-copy deserialization
-- Comprehensive error messages
-- Multiple array formats
+- Configurable output
+- Rich error messages
 - No unsafe code
 
 ## Documentation
