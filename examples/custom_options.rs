@@ -7,13 +7,6 @@ use serde_toon::{to_string_with_options, Delimiter, ToonOptions};
 use std::error::Error;
 
 #[derive(Debug, Serialize, Deserialize)]
-struct Config {
-    name: String,
-    version: String,
-    debug: bool,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
 struct DataRow {
     id: u32,
     value: String,
@@ -21,46 +14,53 @@ struct DataRow {
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
-    let config = Config {
-        name: "MyApp".to_string(),
-        version: "1.0.0".to_string(),
-        debug: true,
-    };
+    let data = vec![
+        DataRow {
+            id: 1,
+            value: "test".into(),
+            active: true,
+        },
+        DataRow {
+            id: 2,
+            value: "prod".into(),
+            active: false,
+        },
+    ];
 
-    // Default format (comma delimiter)
-    println!("Default (comma):");
-    let default = serde_toon::to_string(&config)?;
+    // Default (comma delimiter)
+    println!("Default (comma delimiter):");
+    let default = serde_toon::to_string(&data)?;
     println!("{}\n", default);
 
-    // Tab delimiter (useful for spreadsheets)
+    // Tab delimiter (useful for TSV export)
     println!("Tab delimiter:");
     let tab_options = ToonOptions::new().with_delimiter(Delimiter::Tab);
-    let tab_format = to_string_with_options(&config, tab_options)?;
+    let tab_format = to_string_with_options(&data, tab_options)?;
     println!("{}\n", tab_format);
 
-    // Pipe delimiter (useful for shell processing)
+    // Pipe delimiter (useful for markdown tables)
     println!("Pipe delimiter:");
     let pipe_options = ToonOptions::new().with_delimiter(Delimiter::Pipe);
-    let pipe_format = to_string_with_options(&config, pipe_options)?;
+    let pipe_format = to_string_with_options(&data, pipe_options)?;
     println!("{}\n", pipe_format);
 
     // Custom length marker
     println!("Custom length marker (#):");
     let marked_options = ToonOptions::new().with_length_marker('#');
-    let data = vec![
-        DataRow {
-            id: 1,
-            value: "test".to_string(),
-            active: true,
-        },
-        DataRow {
-            id: 2,
-            value: "prod".to_string(),
-            active: false,
-        },
-    ];
     let marked = to_string_with_options(&data, marked_options)?;
-    println!("{}", marked);
+    println!("{}\n", marked);
+
+    // Primitive arrays show delimiters clearly
+    println!("Primitive arrays with different delimiters:");
+    let numbers = vec![1, 2, 3, 4, 5];
+
+    println!("  Comma: {}", serde_toon::to_string(&numbers)?);
+
+    let tab_opts = ToonOptions::new().with_delimiter(Delimiter::Tab);
+    println!("  Tab:   {}", to_string_with_options(&numbers, tab_opts)?);
+
+    let pipe_opts = ToonOptions::new().with_delimiter(Delimiter::Pipe);
+    println!("  Pipe:  {}", to_string_with_options(&numbers, pipe_opts)?);
 
     Ok(())
 }

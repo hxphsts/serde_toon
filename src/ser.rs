@@ -50,7 +50,7 @@
 //! assert_eq!(toon_string, "[5]: 1,2,3,4,5");
 //! ```
 
-use crate::{Error, Number, Result, ToonMap, ToonOptions, ToonValue};
+use crate::{Error, Number, Result, ToonMap, ToonOptions, Value};
 use serde::ser::SerializeSeq;
 use serde::{ser, Serialize};
 
@@ -331,7 +331,7 @@ impl<'a> ser::Serializer for &'a mut Serializer {
 
 pub struct SeqSerializer<'a> {
     ser: &'a mut Serializer,
-    elements: Vec<ToonValue>,
+    elements: Vec<Value>,
 }
 
 impl<'a> ser::SerializeSeq for SeqSerializer<'a> {
@@ -388,7 +388,7 @@ impl<'a> ser::SerializeSeq for SeqSerializer<'a> {
 
 pub struct TupleSerializer<'a> {
     ser: &'a mut Serializer,
-    elements: Vec<ToonValue>,
+    elements: Vec<Value>,
 }
 
 impl<'a> ser::SerializeTuple for TupleSerializer<'a> {
@@ -415,7 +415,7 @@ impl<'a> ser::SerializeTuple for TupleSerializer<'a> {
 
 pub struct TupleStructSerializer<'a> {
     ser: &'a mut Serializer,
-    elements: Vec<ToonValue>,
+    elements: Vec<Value>,
 }
 
 impl<'a> ser::SerializeTupleStruct for TupleStructSerializer<'a> {
@@ -443,7 +443,7 @@ impl<'a> ser::SerializeTupleStruct for TupleStructSerializer<'a> {
 pub struct TupleVariantSerializer<'a> {
     ser: &'a mut Serializer,
     variant: String,
-    elements: Vec<ToonValue>,
+    elements: Vec<Value>,
 }
 
 impl<'a> ser::SerializeTupleVariant for TupleVariantSerializer<'a> {
@@ -476,7 +476,7 @@ impl<'a> ser::SerializeTupleVariant for TupleVariantSerializer<'a> {
 
 pub struct MapSerializer<'a> {
     ser: &'a mut Serializer,
-    entries: Vec<(String, ToonValue)>,
+    entries: Vec<(String, Value)>,
     current_key: Option<String>,
 }
 
@@ -490,7 +490,7 @@ impl<'a> ser::SerializeMap for MapSerializer<'a> {
     {
         let key_value = to_toon_value(key)?;
         match key_value {
-            ToonValue::String(s) => {
+            Value::String(s) => {
                 self.current_key = Some(s);
                 Ok(())
             }
@@ -524,7 +524,7 @@ impl<'a> ser::SerializeMap for MapSerializer<'a> {
 
 pub struct StructSerializer<'a> {
     ser: &'a mut Serializer,
-    entries: Vec<(String, ToonValue)>,
+    entries: Vec<(String, Value)>,
 }
 
 impl<'a> ser::SerializeStruct for StructSerializer<'a> {
@@ -554,7 +554,7 @@ impl<'a> ser::SerializeStruct for StructSerializer<'a> {
 pub struct StructVariantSerializer<'a> {
     ser: &'a mut Serializer,
     variant: String,
-    entries: Vec<(String, ToonValue)>,
+    entries: Vec<(String, Value)>,
 }
 
 impl<'a> ser::SerializeStructVariant for StructVariantSerializer<'a> {
@@ -594,10 +594,10 @@ impl<'a> ser::SerializeStructVariant for StructVariantSerializer<'a> {
     }
 }
 
-pub struct ToonValueSerializer;
+pub struct ValueSerializer;
 
 pub struct SerializeVec {
-    vec: Vec<ToonValue>,
+    vec: Vec<Value>,
 }
 
 pub struct SerializeMap {
@@ -605,8 +605,8 @@ pub struct SerializeMap {
     current_key: Option<String>,
 }
 
-impl ser::Serializer for ToonValueSerializer {
-    type Ok = ToonValue;
+impl ser::Serializer for ValueSerializer {
+    type Ok = Value;
     type Error = Error;
 
     type SerializeSeq = SerializeVec;
@@ -617,87 +617,87 @@ impl ser::Serializer for ToonValueSerializer {
     type SerializeStruct = SerializeMap;
     type SerializeStructVariant = SerializeMap;
 
-    fn serialize_bool(self, v: bool) -> Result<ToonValue> {
-        Ok(ToonValue::Bool(v))
+    fn serialize_bool(self, v: bool) -> Result<Value> {
+        Ok(Value::Bool(v))
     }
 
-    fn serialize_i8(self, v: i8) -> Result<ToonValue> {
-        Ok(ToonValue::Number(Number::Integer(v as i64)))
+    fn serialize_i8(self, v: i8) -> Result<Value> {
+        Ok(Value::Number(Number::Integer(v as i64)))
     }
 
-    fn serialize_i16(self, v: i16) -> Result<ToonValue> {
-        Ok(ToonValue::Number(Number::Integer(v as i64)))
+    fn serialize_i16(self, v: i16) -> Result<Value> {
+        Ok(Value::Number(Number::Integer(v as i64)))
     }
 
-    fn serialize_i32(self, v: i32) -> Result<ToonValue> {
-        Ok(ToonValue::Number(Number::Integer(v as i64)))
+    fn serialize_i32(self, v: i32) -> Result<Value> {
+        Ok(Value::Number(Number::Integer(v as i64)))
     }
 
-    fn serialize_i64(self, v: i64) -> Result<ToonValue> {
-        Ok(ToonValue::Number(Number::Integer(v)))
+    fn serialize_i64(self, v: i64) -> Result<Value> {
+        Ok(Value::Number(Number::Integer(v)))
     }
 
-    fn serialize_u8(self, v: u8) -> Result<ToonValue> {
-        Ok(ToonValue::Number(Number::Integer(v as i64)))
+    fn serialize_u8(self, v: u8) -> Result<Value> {
+        Ok(Value::Number(Number::Integer(v as i64)))
     }
 
-    fn serialize_u16(self, v: u16) -> Result<ToonValue> {
-        Ok(ToonValue::Number(Number::Integer(v as i64)))
+    fn serialize_u16(self, v: u16) -> Result<Value> {
+        Ok(Value::Number(Number::Integer(v as i64)))
     }
 
-    fn serialize_u32(self, v: u32) -> Result<ToonValue> {
-        Ok(ToonValue::Number(Number::Integer(v as i64)))
+    fn serialize_u32(self, v: u32) -> Result<Value> {
+        Ok(Value::Number(Number::Integer(v as i64)))
     }
 
-    fn serialize_u64(self, v: u64) -> Result<ToonValue> {
+    fn serialize_u64(self, v: u64) -> Result<Value> {
         if v <= i64::MAX as u64 {
-            Ok(ToonValue::Number(Number::Integer(v as i64)))
+            Ok(Value::Number(Number::Integer(v as i64)))
         } else {
-            Ok(ToonValue::Number(Number::Float(v as f64)))
+            Ok(Value::Number(Number::Float(v as f64)))
         }
     }
 
-    fn serialize_f32(self, v: f32) -> Result<ToonValue> {
-        Ok(ToonValue::Number(Number::Float(v as f64)))
+    fn serialize_f32(self, v: f32) -> Result<Value> {
+        Ok(Value::Number(Number::Float(v as f64)))
     }
 
-    fn serialize_f64(self, v: f64) -> Result<ToonValue> {
-        Ok(ToonValue::Number(Number::Float(v)))
+    fn serialize_f64(self, v: f64) -> Result<Value> {
+        Ok(Value::Number(Number::Float(v)))
     }
 
-    fn serialize_char(self, v: char) -> Result<ToonValue> {
-        Ok(ToonValue::String(v.to_string()))
+    fn serialize_char(self, v: char) -> Result<Value> {
+        Ok(Value::String(v.to_string()))
     }
 
-    fn serialize_str(self, v: &str) -> Result<ToonValue> {
-        Ok(ToonValue::String(v.to_string()))
+    fn serialize_str(self, v: &str) -> Result<Value> {
+        Ok(Value::String(v.to_string()))
     }
 
-    fn serialize_bytes(self, v: &[u8]) -> Result<ToonValue> {
+    fn serialize_bytes(self, v: &[u8]) -> Result<Value> {
         let vec = v
             .iter()
-            .map(|&b| ToonValue::Number(Number::Integer(b as i64)))
+            .map(|&b| Value::Number(Number::Integer(b as i64)))
             .collect();
-        Ok(ToonValue::Array(vec))
+        Ok(Value::Array(vec))
     }
 
-    fn serialize_none(self) -> Result<ToonValue> {
-        Ok(ToonValue::Null)
+    fn serialize_none(self) -> Result<Value> {
+        Ok(Value::Null)
     }
 
-    fn serialize_some<T>(self, value: &T) -> Result<ToonValue>
+    fn serialize_some<T>(self, value: &T) -> Result<Value>
     where
         T: ?Sized + Serialize,
     {
         value.serialize(self)
     }
 
-    fn serialize_unit(self) -> Result<ToonValue> {
-        Ok(ToonValue::Null)
+    fn serialize_unit(self) -> Result<Value> {
+        Ok(Value::Null)
     }
 
-    fn serialize_unit_struct(self, _name: &'static str) -> Result<ToonValue> {
-        Ok(ToonValue::Null)
+    fn serialize_unit_struct(self, _name: &'static str) -> Result<Value> {
+        Ok(Value::Null)
     }
 
     fn serialize_unit_variant(
@@ -705,11 +705,11 @@ impl ser::Serializer for ToonValueSerializer {
         _name: &'static str,
         _variant_index: u32,
         variant: &'static str,
-    ) -> Result<ToonValue> {
-        Ok(ToonValue::String(variant.to_string()))
+    ) -> Result<Value> {
+        Ok(Value::String(variant.to_string()))
     }
 
-    fn serialize_newtype_struct<T>(self, _name: &'static str, value: &T) -> Result<ToonValue>
+    fn serialize_newtype_struct<T>(self, _name: &'static str, value: &T) -> Result<Value>
     where
         T: ?Sized + Serialize,
     {
@@ -722,7 +722,7 @@ impl ser::Serializer for ToonValueSerializer {
         _variant_index: u32,
         _variant: &'static str,
         _value: &T,
-    ) -> Result<ToonValue>
+    ) -> Result<Value>
     where
         T: ?Sized + Serialize,
     {
@@ -786,7 +786,7 @@ impl SerializeMap {
 }
 
 impl ser::SerializeSeq for SerializeVec {
-    type Ok = ToonValue;
+    type Ok = Value;
     type Error = Error;
 
     fn serialize_element<T>(&mut self, value: &T) -> Result<()>
@@ -797,13 +797,13 @@ impl ser::SerializeSeq for SerializeVec {
         Ok(())
     }
 
-    fn end(self) -> Result<ToonValue> {
-        Ok(ToonValue::Array(self.vec))
+    fn end(self) -> Result<Value> {
+        Ok(Value::Array(self.vec))
     }
 }
 
 impl ser::SerializeTuple for SerializeVec {
-    type Ok = ToonValue;
+    type Ok = Value;
     type Error = Error;
 
     fn serialize_element<T>(&mut self, value: &T) -> Result<()>
@@ -814,13 +814,13 @@ impl ser::SerializeTuple for SerializeVec {
         Ok(())
     }
 
-    fn end(self) -> Result<ToonValue> {
-        Ok(ToonValue::Array(self.vec))
+    fn end(self) -> Result<Value> {
+        Ok(Value::Array(self.vec))
     }
 }
 
 impl ser::SerializeTupleStruct for SerializeVec {
-    type Ok = ToonValue;
+    type Ok = Value;
     type Error = Error;
 
     fn serialize_field<T>(&mut self, value: &T) -> Result<()>
@@ -831,13 +831,13 @@ impl ser::SerializeTupleStruct for SerializeVec {
         Ok(())
     }
 
-    fn end(self) -> Result<ToonValue> {
-        Ok(ToonValue::Array(self.vec))
+    fn end(self) -> Result<Value> {
+        Ok(Value::Array(self.vec))
     }
 }
 
 impl ser::SerializeTupleVariant for SerializeVec {
-    type Ok = ToonValue;
+    type Ok = Value;
     type Error = Error;
 
     fn serialize_field<T>(&mut self, value: &T) -> Result<()>
@@ -848,13 +848,13 @@ impl ser::SerializeTupleVariant for SerializeVec {
         Ok(())
     }
 
-    fn end(self) -> Result<ToonValue> {
-        Ok(ToonValue::Array(self.vec))
+    fn end(self) -> Result<Value> {
+        Ok(Value::Array(self.vec))
     }
 }
 
 impl ser::SerializeMap for SerializeMap {
-    type Ok = ToonValue;
+    type Ok = Value;
     type Error = Error;
 
     fn serialize_key<T>(&mut self, key: &T) -> Result<()>
@@ -862,7 +862,7 @@ impl ser::SerializeMap for SerializeMap {
         T: ?Sized + Serialize,
     {
         match to_toon_value(key)? {
-            ToonValue::String(s) => {
+            Value::String(s) => {
                 self.current_key = Some(s);
                 Ok(())
             }
@@ -882,13 +882,13 @@ impl ser::SerializeMap for SerializeMap {
         Ok(())
     }
 
-    fn end(self) -> Result<ToonValue> {
-        Ok(ToonValue::Object(self.map))
+    fn end(self) -> Result<Value> {
+        Ok(Value::Object(self.map))
     }
 }
 
 impl ser::SerializeStruct for SerializeMap {
-    type Ok = ToonValue;
+    type Ok = Value;
     type Error = Error;
 
     fn serialize_field<T>(&mut self, key: &'static str, value: &T) -> Result<()>
@@ -899,13 +899,13 @@ impl ser::SerializeStruct for SerializeMap {
         Ok(())
     }
 
-    fn end(self) -> Result<ToonValue> {
-        Ok(ToonValue::Object(self.map))
+    fn end(self) -> Result<Value> {
+        Ok(Value::Object(self.map))
     }
 }
 
 impl ser::SerializeStructVariant for SerializeMap {
-    type Ok = ToonValue;
+    type Ok = Value;
     type Error = Error;
 
     fn serialize_field<T>(&mut self, key: &'static str, value: &T) -> Result<()>
@@ -916,23 +916,23 @@ impl ser::SerializeStructVariant for SerializeMap {
         Ok(())
     }
 
-    fn end(self) -> Result<ToonValue> {
-        Ok(ToonValue::Object(self.map))
+    fn end(self) -> Result<Value> {
+        Ok(Value::Object(self.map))
     }
 }
 
-fn to_toon_value<T: Serialize + ?Sized>(value: &T) -> Result<ToonValue> {
-    value.serialize(ToonValueSerializer)
+fn to_toon_value<T: Serialize + ?Sized>(value: &T) -> Result<Value> {
+    value.serialize(ValueSerializer)
 }
 
-fn can_be_tabular(elements: &[ToonValue]) -> Option<(Vec<String>, Vec<Vec<ToonValue>>)> {
+fn can_be_tabular(elements: &[Value]) -> Option<(Vec<String>, Vec<Vec<Value>>)> {
     if elements.is_empty() {
         return None;
     }
 
     // All elements must be objects with identical primitive fields
     let first_headers = match &elements[0] {
-        ToonValue::Object(obj) => {
+        Value::Object(obj) => {
             // Check that all values are primitives (not objects or arrays)
             for value in obj.values() {
                 if !is_primitive_value(value) {
@@ -951,7 +951,7 @@ fn can_be_tabular(elements: &[ToonValue]) -> Option<(Vec<String>, Vec<Vec<ToonVa
 
     for element in elements {
         match element {
-            ToonValue::Object(obj) => {
+            Value::Object(obj) => {
                 // Check that this object has the same structure
                 let mut element_headers: Vec<_> = obj.keys().cloned().collect();
                 element_headers.sort();
@@ -969,7 +969,7 @@ fn can_be_tabular(elements: &[ToonValue]) -> Option<(Vec<String>, Vec<Vec<ToonVa
 
                 let row: Vec<_> = first_headers
                     .iter()
-                    .map(|key| obj.get(key).cloned().unwrap_or(ToonValue::Null))
+                    .map(|key| obj.get(key).cloned().unwrap_or(Value::Null))
                     .collect();
                 rows.push(row);
             }
@@ -981,22 +981,22 @@ fn can_be_tabular(elements: &[ToonValue]) -> Option<(Vec<String>, Vec<Vec<ToonVa
 }
 
 #[inline]
-fn is_primitive_value(value: &ToonValue) -> bool {
+fn is_primitive_value(value: &Value) -> bool {
     match value {
-        ToonValue::Null
-        | ToonValue::Bool(_)
-        | ToonValue::Number(_)
-        | ToonValue::String(_)
-        | ToonValue::Date(_)
-        | ToonValue::BigInt(_) => true,
-        ToonValue::Array(_) | ToonValue::Object(_) | ToonValue::Table { .. } => false,
+        Value::Null
+        | Value::Bool(_)
+        | Value::Number(_)
+        | Value::String(_)
+        | Value::Date(_)
+        | Value::BigInt(_) => true,
+        Value::Array(_) | Value::Object(_) | Value::Table { .. } => false,
     }
 }
 
 fn write_tabular_array(
     output: &mut String,
     headers: &[String],
-    rows: &[Vec<ToonValue>],
+    rows: &[Vec<Value>],
     options: &ToonOptions,
     indent_level: usize,
 ) {
@@ -1042,7 +1042,7 @@ fn write_tabular_array(
     }
 }
 
-fn write_inline_array(output: &mut String, elements: &[ToonValue], options: &ToonOptions) {
+fn write_inline_array(output: &mut String, elements: &[Value], options: &ToonOptions) {
     // Cache delimiter string for loop performance
     let delimiter_str = options.delimiter.as_str();
     let len_marker = if let Some(marker) = options.length_marker {
@@ -1071,7 +1071,7 @@ fn write_inline_array(output: &mut String, elements: &[ToonValue], options: &Too
 
 fn write_list_array(
     output: &mut String,
-    elements: &[ToonValue],
+    elements: &[Value],
     options: &ToonOptions,
     indent_level: usize,
 ) {
@@ -1089,7 +1089,7 @@ fn write_list_array(
         output.push_str("- ");
 
         match element {
-            ToonValue::Object(obj) => {
+            Value::Object(obj) => {
                 // For objects in list format, sort keys alphabetically for deterministic output
                 let mut sorted_entries: Vec<_> = obj.iter().collect();
                 sorted_entries.sort_by(|(k1, _), (k2, _)| k1.cmp(k2));
@@ -1121,7 +1121,7 @@ fn write_list_array(
 
 fn write_array_toon(
     output: &mut String,
-    arr: &[ToonValue],
+    arr: &[Value],
     options: &ToonOptions,
     indent_level: usize,
 ) {
@@ -1144,7 +1144,7 @@ fn write_array_toon(
 
 fn write_object(
     output: &mut String,
-    entries: &[(String, ToonValue)],
+    entries: &[(String, Value)],
     options: &ToonOptions,
     indent_level: usize,
 ) {
@@ -1166,18 +1166,18 @@ fn write_object(
         output.push(':');
 
         match value {
-            ToonValue::Array(arr) => {
+            Value::Array(arr) => {
                 // Arrays get special TOON formatting
                 output.push(' ');
                 write_array_toon(output, arr, options, indent_level);
             }
-            ToonValue::Object(obj) => {
+            Value::Object(obj) => {
                 // For nested objects, handle indentation properly
                 output.push('\n');
                 let entries: Vec<_> = obj.iter().map(|(k, v)| (k.clone(), v.clone())).collect();
                 write_object(output, &entries, options, indent_level + 1);
             }
-            ToonValue::Table { .. } => {
+            Value::Table { .. } => {
                 // For tables, no space after colon
                 output.push('\n');
                 output.push_str(&" ".repeat((indent_level + 1) * options.indent));
@@ -1192,12 +1192,12 @@ fn write_object(
     }
 }
 
-fn write_toon_value_quoted(output: &mut String, value: &ToonValue, options: &ToonOptions) {
+fn write_toon_value_quoted(output: &mut String, value: &Value, options: &ToonOptions) {
     match value {
-        ToonValue::Null => output.push_str("null"),
-        ToonValue::Bool(b) => output.push_str(if *b { "true" } else { "false" }),
-        ToonValue::Number(n) => output.push_str(&n.to_string()),
-        ToonValue::String(s) => {
+        Value::Null => output.push_str("null"),
+        Value::Bool(b) => output.push_str(if *b { "true" } else { "false" }),
+        Value::Number(n) => output.push_str(&n.to_string()),
+        Value::String(s) => {
             if needs_quotes_toon(s, options) {
                 output.push('"');
                 for ch in s.chars() {
@@ -1218,7 +1218,7 @@ fn write_toon_value_quoted(output: &mut String, value: &ToonValue, options: &Too
                 output.push_str(s);
             }
         }
-        ToonValue::Array(arr) => {
+        Value::Array(arr) => {
             // Arrays should be handled by their containing context
             output.push('[');
             for (i, elem) in arr.iter().enumerate() {
@@ -1229,14 +1229,14 @@ fn write_toon_value_quoted(output: &mut String, value: &ToonValue, options: &Too
             }
             output.push(']');
         }
-        ToonValue::Object(obj) => {
+        Value::Object(obj) => {
             let entries: Vec<_> = obj.iter().map(|(k, v)| (k.clone(), v.clone())).collect();
             write_object(output, &entries, options, 0);
         }
-        ToonValue::Table { headers, rows } => {
+        Value::Table { headers, rows } => {
             write_tabular_array(output, headers, rows, options, 0);
         }
-        ToonValue::Date(dt) => {
+        Value::Date(dt) => {
             let s = dt.to_rfc3339();
             if needs_quotes_toon(&s, options) {
                 output.push('"');
@@ -1246,7 +1246,7 @@ fn write_toon_value_quoted(output: &mut String, value: &ToonValue, options: &Too
                 output.push_str(&s);
             }
         }
-        ToonValue::BigInt(bi) => {
+        Value::BigInt(bi) => {
             let s = format!("{}n", bi);
             if needs_quotes_toon(&s, options) {
                 output.push('"');

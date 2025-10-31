@@ -23,8 +23,8 @@
 //!
 //! ```toml
 //! [dependencies]
-//! serde_toon = "0.1"
 //! serde = { version = "1.0", features = ["derive"] }
+//! serde_toon = "0.2"
 //! ```
 //!
 //! ### Basic Serialization and Deserialization
@@ -82,7 +82,7 @@
 //! ### Dynamic Values with toon! Macro
 //!
 //! ```rust
-//! use serde_toon::{toon, ToonValue};
+//! use serde_toon::{toon, Value};
 //!
 //! let data = toon!({
 //!     "name": "Alice",
@@ -90,7 +90,7 @@
 //!     "tags": ["rust", "serde", "llm"]
 //! });
 //!
-//! if let ToonValue::Object(obj) = data {
+//! if let Value::Object(obj) = data {
 //!     assert_eq!(obj.get("name").and_then(|v| v.as_str()), Some("Alice"));
 //! }
 //! ```
@@ -111,8 +111,9 @@
 //!
 //! ## Format Specification
 //!
-//! For the complete TOON format specification, see:
-//! <https://github.com/johannschopplich/toon>
+//! For the complete TOON format specification, see the [`spec`] module documentation.
+//!
+//! External reference: <https://github.com/johannschopplich/toon>
 //!
 //! ## Examples
 //!
@@ -120,8 +121,8 @@
 //!
 //! - **`simple.rs`** - Your first TOON experience (basic serialization)
 //! - **`macro.rs`** - Building values with the toon! macro
-//! - **`tabular_arrays.rs`** - TOON's killer feature for repeated structures
-//! - **`dynamic_values.rs`** - Working with ToonValue dynamically
+//! - **`tabular_arrays.rs`** - TOON's tabular feature for repeated structures
+//! - **`dynamic_values.rs`** - Working with Value dynamically
 //! - **`custom_options.rs`** - Customizing delimiters and formatting
 //! - **`token_efficiency.rs`** - TOON vs JSON comparison
 //!
@@ -133,14 +134,15 @@ pub mod macros;
 pub mod map;
 pub mod options;
 pub mod ser;
+pub mod spec;
 pub mod value;
 
 pub use de::Deserializer;
 pub use error::{Error, Result};
 pub use map::ToonMap;
 pub use options::{Delimiter, ToonOptions};
-pub use ser::{Serializer, ToonValueSerializer};
-pub use value::{Number, ToonValue};
+pub use ser::{Serializer, ValueSerializer};
+pub use value::{Number, Value};
 
 use serde::{Deserialize, Serialize};
 use std::io;
@@ -232,21 +234,21 @@ where
     Ok(serializer.into_inner())
 }
 
-/// Convert any `T: Serialize` to a `ToonValue`.
+/// Convert any `T: Serialize` to a `Value`.
 ///
 /// Useful for working with TOON data dynamically when the structure isn't known at compile time.
 ///
 /// # Examples
 ///
 /// ```rust
-/// use serde_toon::{to_value, ToonValue};
+/// use serde_toon::{to_value, Value};
 /// use serde::Serialize;
 ///
 /// #[derive(Serialize)]
 /// struct Point { x: i32, y: i32 }
 ///
 /// let point = Point { x: 1, y: 2 };
-/// let value: ToonValue = to_value(&point).unwrap();
+/// let value: Value = to_value(&point).unwrap();
 /// assert!(value.is_object());
 /// ```
 ///
@@ -254,11 +256,11 @@ where
 ///
 /// Returns an error if the value cannot be serialized.
 #[must_use = "this returns the result of the operation, errors must be handled"]
-pub fn to_value<T>(value: &T) -> Result<ToonValue>
+pub fn to_value<T>(value: &T) -> Result<Value>
 where
     T: ?Sized + Serialize,
 {
-    value.serialize(crate::ser::ToonValueSerializer)
+    value.serialize(crate::ser::ValueSerializer)
 }
 
 /// Serialize any `T: Serialize` to a writer in TOON format.
@@ -462,9 +464,9 @@ mod tests {
         let value = to_value(&point).unwrap();
 
         match value {
-            ToonValue::Object(obj) => {
-                assert_eq!(obj.get("x"), Some(&ToonValue::Number(Number::Integer(1))));
-                assert_eq!(obj.get("y"), Some(&ToonValue::Number(Number::Integer(2))));
+            Value::Object(obj) => {
+                assert_eq!(obj.get("x"), Some(&Value::Number(Number::Integer(1))));
+                assert_eq!(obj.get("y"), Some(&Value::Number(Number::Integer(2))));
             }
             _ => panic!("Expected object"),
         }

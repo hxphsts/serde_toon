@@ -22,7 +22,7 @@
 //! ```rust
 //! use serde_toon::{from_str, Error};
 //!
-//! let result: Result<serde_toon::ToonValue, Error> = from_str("invalid: [malformed");
+//! let result: Result<serde_toon::Value, Error> = from_str("invalid: [malformed");
 //! assert!(result.is_err());
 //!
 //! if let Err(err) = result {

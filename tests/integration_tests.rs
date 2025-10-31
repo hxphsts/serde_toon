@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 use serde_toon::{
-    from_str, to_string, to_string_pretty, to_value, Delimiter, Number, ToonOptions, ToonValue,
+    from_str, to_string, to_string_pretty, to_value, Delimiter, Number, ToonOptions, Value,
 };
 
 #[derive(Serialize, Deserialize, Debug, PartialEq)]
@@ -158,20 +158,14 @@ fn test_to_value() {
     let value = to_value(&user).unwrap();
 
     match value {
-        ToonValue::Object(obj) => {
-            assert_eq!(
-                obj.get("id"),
-                Some(&ToonValue::Number(Number::Integer(123)))
-            );
-            assert_eq!(
-                obj.get("name"),
-                Some(&ToonValue::String("Alice".to_string()))
-            );
-            assert_eq!(obj.get("active"), Some(&ToonValue::Bool(true)));
+        Value::Object(obj) => {
+            assert_eq!(obj.get("id"), Some(&Value::Number(Number::Integer(123))));
+            assert_eq!(obj.get("name"), Some(&Value::String("Alice".to_string())));
+            assert_eq!(obj.get("active"), Some(&Value::Bool(true)));
 
-            if let Some(ToonValue::Array(tags)) = obj.get("tags") {
+            if let Some(Value::Array(tags)) = obj.get("tags") {
                 assert_eq!(tags.len(), 1);
-                assert_eq!(tags[0], ToonValue::String("admin".to_string()));
+                assert_eq!(tags[0], Value::String("admin".to_string()));
             } else {
                 panic!("Expected tags to be an array");
             }

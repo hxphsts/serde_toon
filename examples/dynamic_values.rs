@@ -1,9 +1,9 @@
-//! Working with ToonValue for runtime flexibility.
+//! Working with Value for runtime flexibility.
 //!
 //! Run with: cargo run --example dynamic_values
 
 use serde::{Deserialize, Serialize};
-use serde_toon::{to_string_pretty, to_value, toon, ToonValue};
+use serde_toon::{to_string_pretty, to_value, toon, Value};
 use std::error::Error;
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -25,8 +25,8 @@ fn main() -> Result<(), Box<dyn Error>> {
     println!("Config as TOON:\n{}\n", to_string_pretty(&config)?);
 
     // Access values dynamically
-    if let ToonValue::Object(obj) = &config {
-        if let Some(ToonValue::String(host)) = obj.get("host") {
+    if let Value::Object(obj) = &config {
+        if let Some(Value::String(host)) = obj.get("host") {
             println!("Accessing field 'host': {}", host);
         }
 
@@ -34,20 +34,20 @@ fn main() -> Result<(), Box<dyn Error>> {
             println!("Accessing field 'port': {}", port);
         }
 
-        if let Some(ToonValue::Array(features)) = obj.get("features") {
+        if let Some(Value::Array(features)) = obj.get("features") {
             println!("Accessing field 'features': {} items\n", features.len());
         }
     }
 
-    // Convert existing struct to ToonValue
+    // Convert existing struct to Value
     let user = User {
         id: 123,
-        name: "Alice".to_string(),
-        roles: vec!["admin".to_string(), "developer".to_string()],
+        name: "Alice".into(),
+        roles: vec!["admin".into(), "developer".into()],
     };
 
     let user_value = to_value(&user)?;
-    println!("User as ToonValue:\n{}\n", to_string_pretty(&user_value)?);
+    println!("User as Value:\n{}\n", to_string_pretty(&user_value)?);
 
     // Runtime type checking
     println!("Type checks:");

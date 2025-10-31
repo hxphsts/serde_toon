@@ -2,7 +2,7 @@
 //!
 //! Run with: cargo run --example macro
 
-use serde_toon::{to_string_pretty, toon, ToonValue};
+use serde_toon::{to_string_pretty, toon, Value};
 use std::error::Error;
 
 fn main() -> Result<(), Box<dyn Error>> {
@@ -65,15 +65,15 @@ fn main() -> Result<(), Box<dyn Error>> {
     println!("Dynamic construction:");
     println!("{}\n", to_string_pretty(&summary)?);
 
-    if let ToonValue::Object(obj) = &config {
-        if let Some(ToonValue::Object(app)) = obj.get("app") {
+    if let Value::Object(obj) = &config {
+        if let Some(Value::Object(app)) = obj.get("app") {
             if let Some(name) = app.get("name").and_then(|v| v.as_str()) {
                 println!("Accessing values:");
                 println!("  App name: {}", name);
             }
         }
 
-        if let Some(ToonValue::Array(features)) = obj.get("features") {
+        if let Some(Value::Array(features)) = obj.get("features") {
             println!("  Features: {}", features.len());
         }
     }
