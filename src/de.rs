@@ -41,7 +41,7 @@
 //! ```
 
 use crate::options::Delimiter;
-use crate::{Error, Number, Result, ToonMap, ToonValue};
+use crate::{Error, Number, Result, ToonMap, Value};
 use serde::de::IntoDeserializer;
 use serde::{de, forward_to_deserialize_any};
 
@@ -308,7 +308,7 @@ impl<'de> Deserializer<'de> {
         }
     }
 
-    fn parse_array(&mut self) -> Result<ToonValue> {
+    fn parse_array(&mut self) -> Result<Value> {
         // Parse array format like "[3]: a,b,c" or "[2]{id,name}: 1,Alice 2,Bob" or "[3]:"
         if self.peek_char() != Some('[') {
             return Err(Error::syntax(self.line, self.column, "Expected '['"));
@@ -378,7 +378,7 @@ impl<'de> Deserializer<'de> {
             self.next_char(); // consume ':'
 
             if declared_length == 0 {
-                return Ok(ToonValue::Array(vec![]));
+                return Ok(Value::Array(vec![]));
             }
 
             self.skip_whitespace();
@@ -398,7 +398,7 @@ impl<'de> Deserializer<'de> {
         &mut self,
         declared_length: usize,
         delimiter: Delimiter,
-    ) -> Result<ToonValue> {
+    ) -> Result<Value> {
         let mut elements = Vec::new();
 
         for i in 0..declared_length {
@@ -428,10 +428,10 @@ impl<'de> Deserializer<'de> {
             elements.push(value);
         }
 
-        Ok(ToonValue::Array(elements))
+        Ok(Value::Array(elements))
     }
 
-    fn parse_list_array(&mut self, declared_length: usize) -> Result<ToonValue> {
+    fn parse_list_array(&mut self, declared_length: usize) -> Result<Value> {
         let mut elements = Vec::new();
 
         for _ in 0..declared_length {
@@ -467,10 +467,10 @@ impl<'de> Deserializer<'de> {
             elements.push(value);
         }
 
-        Ok(ToonValue::Array(elements))
+        Ok(Value::Array(elements))
     }
 
-    fn parse_table(&mut self, declared_length: usize, delimiter: Delimiter) -> Result<ToonValue> {
+    fn parse_table(&mut self, declared_length: usize, delimiter: Delimiter) -> Result<Value> {
         // Parse table headers
         if self.peek_char() != Some('{') {
             return Err(Error::syntax(self.line, self.column, "Expected '{'"));
@@ -547,10 +547,10 @@ impl<'de> Deserializer<'de> {
             rows.push(row);
         }
 
-        Ok(ToonValue::Table { headers, rows })
+        Ok(Value::Table { headers, rows })
     }
 
-    fn parse_object(&mut self) -> Result<ToonValue> {
+    fn parse_object(&mut self) -> Result<Value> {
         let mut map = ToonMap::new();
 
         // Detect the base indentation for this object
@@ -575,7 +575,7 @@ impl<'de> Deserializer<'de> {
                     self.position = saved_pos;
                     self.line = saved_line;
                     self.column = saved_col;
-                    return Ok(ToonValue::Object(map));
+                    return Ok(Value::Object(map));
                 } else if base_indent == 0 && next_indent == 0 {
                     // For top-level objects, check if next line looks like a key
                     // by looking for a ':' character
@@ -597,7 +597,7 @@ impl<'de> Deserializer<'de> {
                         self.position = saved_pos;
                         self.line = saved_line;
                         self.column = saved_col;
-                        return Ok(ToonValue::Object(map));
+                        return Ok(Value::Object(map));
                     }
                 }
 
@@ -606,7 +606,7 @@ impl<'de> Deserializer<'de> {
                 self.line = saved_line;
                 self.column = saved_col;
             } else if self.at_end() {
-                return Ok(ToonValue::Object(map));
+                return Ok(Value::Object(map));
             }
         }
 
@@ -681,60 +681,56 @@ impl<'de> Deserializer<'de> {
             self.skip_whitespace_same_line();
         }
 
-        Ok(ToonValue::Object(map))
+        Ok(Value::Object(map))
     }
 
-    fn parse_primitive_value(&mut self) -> Result<ToonValue> {
+    fn parse_primitive_value(&mut self) -> Result<Value> {
         self.skip_whitespace();
 
         match self.peek_char() {
-            Some('"') => Ok(ToonValue::String(self.parse_string()?)),
-            Some('t') | Some('f') => Ok(ToonValue::Bool(self.parse_bool()?)),
+            Some('"') => Ok(Value::String(self.parse_string()?)),
+            Some('t') | Some('f') => Ok(Value::Bool(self.parse_bool()?)),
             Some('n') => {
                 self.parse_null()?;
-                Ok(ToonValue::Null)
+                Ok(Value::Null)
             }
-            Some(ch) if ch.is_ascii_digit() || ch == '-' => {
-                Ok(ToonValue::Number(self.parse_number()?))
-            }
+            Some(ch) if ch.is_ascii_digit() || ch == '-' => Ok(Value::Number(self.parse_number()?)),
             _ => {
                 // Try parsing as unquoted string
                 let s = self.parse_string()?;
                 if s == "true" {
-                    Ok(ToonValue::Bool(true))
+                    Ok(Value::Bool(true))
                 } else if s == "false" {
-                    Ok(ToonValue::Bool(false))
+                    Ok(Value::Bool(false))
                 } else if s == "null" {
-                    Ok(ToonValue::Null)
+                    Ok(Value::Null)
                 } else if let Ok(n) = s.parse::<i64>() {
-                    Ok(ToonValue::Number(Number::Integer(n)))
+                    Ok(Value::Number(Number::Integer(n)))
                 } else if let Ok(f) = s.parse::<f64>() {
-                    Ok(ToonValue::Number(Number::Float(f)))
+                    Ok(Value::Number(Number::Float(f)))
                 } else {
-                    Ok(ToonValue::String(s))
+                    Ok(Value::String(s))
                 }
             }
         }
     }
 
-    fn parse_value(&mut self) -> Result<ToonValue> {
+    fn parse_value(&mut self) -> Result<Value> {
         self.skip_whitespace();
 
         match self.peek_char() {
             Some('[') => self.parse_array(),
-            Some('"') => Ok(ToonValue::String(self.parse_string()?)),
-            Some('t') | Some('f') => Ok(ToonValue::Bool(self.parse_bool()?)),
+            Some('"') => Ok(Value::String(self.parse_string()?)),
+            Some('t') | Some('f') => Ok(Value::Bool(self.parse_bool()?)),
             Some('n') => {
                 self.parse_null()?;
-                Ok(ToonValue::Null)
+                Ok(Value::Null)
             }
-            Some(ch) if ch.is_ascii_digit() || ch == '-' => {
-                Ok(ToonValue::Number(self.parse_number()?))
-            }
+            Some(ch) if ch.is_ascii_digit() || ch == '-' => Ok(Value::Number(self.parse_number()?)),
             _ => {
                 // Check if we're at end of input (empty object case)
                 if self.at_end() {
-                    return Ok(ToonValue::Object(ToonMap::new()));
+                    return Ok(Value::Object(ToonMap::new()));
                 }
 
                 // Could be object or unquoted string
@@ -765,17 +761,17 @@ impl<'de> Deserializer<'de> {
                     // Parse as string
                     let s = self.parse_string()?;
                     if s == "true" {
-                        Ok(ToonValue::Bool(true))
+                        Ok(Value::Bool(true))
                     } else if s == "false" {
-                        Ok(ToonValue::Bool(false))
+                        Ok(Value::Bool(false))
                     } else if s == "null" {
-                        Ok(ToonValue::Null)
+                        Ok(Value::Null)
                     } else if let Ok(n) = s.parse::<i64>() {
-                        Ok(ToonValue::Number(Number::Integer(n)))
+                        Ok(Value::Number(Number::Integer(n)))
                     } else if let Ok(f) = s.parse::<f64>() {
-                        Ok(ToonValue::Number(Number::Float(f)))
+                        Ok(Value::Number(Number::Float(f)))
                     } else {
-                        Ok(ToonValue::String(s))
+                        Ok(Value::String(s))
                     }
                 }
             }
@@ -792,17 +788,17 @@ impl<'de> de::Deserializer<'de> for &mut Deserializer<'de> {
     {
         let value = self.parse_value()?;
         match value {
-            ToonValue::Null => visitor.visit_unit(),
-            ToonValue::Bool(b) => visitor.visit_bool(b),
-            ToonValue::Number(Number::Integer(i)) => visitor.visit_i64(i),
-            ToonValue::Number(Number::Float(f)) => visitor.visit_f64(f),
-            ToonValue::Number(Number::Infinity) => visitor.visit_f64(f64::INFINITY),
-            ToonValue::Number(Number::NegativeInfinity) => visitor.visit_f64(f64::NEG_INFINITY),
-            ToonValue::Number(Number::NaN) => visitor.visit_f64(f64::NAN),
-            ToonValue::String(s) => visitor.visit_string(s),
-            ToonValue::Array(arr) => visitor.visit_seq(SeqDeserializer::new(arr)),
-            ToonValue::Object(obj) => visitor.visit_map(MapDeserializer::new(obj)),
-            ToonValue::Table { headers, rows } => {
+            Value::Null => visitor.visit_unit(),
+            Value::Bool(b) => visitor.visit_bool(b),
+            Value::Number(Number::Integer(i)) => visitor.visit_i64(i),
+            Value::Number(Number::Float(f)) => visitor.visit_f64(f),
+            Value::Number(Number::Infinity) => visitor.visit_f64(f64::INFINITY),
+            Value::Number(Number::NegativeInfinity) => visitor.visit_f64(f64::NEG_INFINITY),
+            Value::Number(Number::NaN) => visitor.visit_f64(f64::NAN),
+            Value::String(s) => visitor.visit_string(s),
+            Value::Array(arr) => visitor.visit_seq(SeqDeserializer::new(arr)),
+            Value::Object(obj) => visitor.visit_map(MapDeserializer::new(obj)),
+            Value::Table { headers, rows } => {
                 // Convert table to array of objects
                 let mut objects = Vec::new();
                 for row in rows {
@@ -812,12 +808,12 @@ impl<'de> de::Deserializer<'de> for &mut Deserializer<'de> {
                             obj.insert(header.clone(), value);
                         }
                     }
-                    objects.push(ToonValue::Object(obj));
+                    objects.push(Value::Object(obj));
                 }
                 visitor.visit_seq(SeqDeserializer::new(objects))
             }
-            ToonValue::Date(dt) => visitor.visit_string(dt.to_rfc3339()),
-            ToonValue::BigInt(bi) => visitor.visit_string(format!("{}n", bi)),
+            Value::Date(dt) => visitor.visit_string(dt.to_rfc3339()),
+            Value::BigInt(bi) => visitor.visit_string(format!("{}n", bi)),
         }
     }
 
@@ -1026,8 +1022,8 @@ impl<'de> de::Deserializer<'de> for &mut Deserializer<'de> {
     {
         let value = self.parse_value()?;
         match value {
-            ToonValue::Array(arr) => visitor.visit_seq(SeqDeserializer::new(arr)),
-            ToonValue::Table { headers, rows } => {
+            Value::Array(arr) => visitor.visit_seq(SeqDeserializer::new(arr)),
+            Value::Table { headers, rows } => {
                 let mut objects = Vec::new();
                 for row in rows {
                     let mut obj = ToonMap::new();
@@ -1036,7 +1032,7 @@ impl<'de> de::Deserializer<'de> for &mut Deserializer<'de> {
                             obj.insert(header.clone(), value);
                         }
                     }
-                    objects.push(ToonValue::Object(obj));
+                    objects.push(Value::Object(obj));
                 }
                 visitor.visit_seq(SeqDeserializer::new(objects))
             }
@@ -1069,7 +1065,7 @@ impl<'de> de::Deserializer<'de> for &mut Deserializer<'de> {
     {
         let value = self.parse_value()?;
         match value {
-            ToonValue::Object(obj) => visitor.visit_map(MapDeserializer::new(obj)),
+            Value::Object(obj) => visitor.visit_map(MapDeserializer::new(obj)),
             _ => Err(Error::custom("Expected object")),
         }
     }
@@ -1097,8 +1093,8 @@ impl<'de> de::Deserializer<'de> for &mut Deserializer<'de> {
     {
         let value = self.parse_value()?;
         match value {
-            ToonValue::String(s) => visitor.visit_enum(s.into_deserializer()),
-            ToonValue::Object(obj) => {
+            Value::String(s) => visitor.visit_enum(s.into_deserializer()),
+            Value::Object(obj) => {
                 if obj.len() == 1 {
                     let (variant, value) = obj.into_iter().next().unwrap();
                     visitor.visit_enum(EnumDeserializer::new(variant, value))
@@ -1126,11 +1122,11 @@ impl<'de> de::Deserializer<'de> for &mut Deserializer<'de> {
 }
 
 struct SeqDeserializer {
-    iter: std::vec::IntoIter<ToonValue>,
+    iter: std::vec::IntoIter<Value>,
 }
 
 impl SeqDeserializer {
-    fn new(vec: Vec<ToonValue>) -> Self {
+    fn new(vec: Vec<Value>) -> Self {
         SeqDeserializer {
             iter: vec.into_iter(),
         }
@@ -1145,9 +1141,7 @@ impl<'de> de::SeqAccess<'de> for SeqDeserializer {
         T: de::DeserializeSeed<'de>,
     {
         match self.iter.next() {
-            Some(value) => seed
-                .deserialize(ToonValueDeserializer::new(value))
-                .map(Some),
+            Some(value) => seed.deserialize(ValueDeserializer::new(value)).map(Some),
             None => Ok(None),
         }
     }
@@ -1161,8 +1155,8 @@ impl<'de> de::SeqAccess<'de> for SeqDeserializer {
 }
 
 struct MapDeserializer {
-    iter: indexmap::map::IntoIter<String, ToonValue>,
-    value: Option<ToonValue>,
+    iter: indexmap::map::IntoIter<String, Value>,
+    value: Option<Value>,
 }
 
 impl MapDeserializer {
@@ -1184,7 +1178,7 @@ impl<'de> de::MapAccess<'de> for MapDeserializer {
         match self.iter.next() {
             Some((key, value)) => {
                 self.value = Some(value);
-                seed.deserialize(ToonValueDeserializer::new(ToonValue::String(key)))
+                seed.deserialize(ValueDeserializer::new(Value::String(key)))
                     .map(Some)
             }
             None => Ok(None),
@@ -1196,7 +1190,7 @@ impl<'de> de::MapAccess<'de> for MapDeserializer {
         V: de::DeserializeSeed<'de>,
     {
         match self.value.take() {
-            Some(value) => seed.deserialize(ToonValueDeserializer::new(value)),
+            Some(value) => seed.deserialize(ValueDeserializer::new(value)),
             None => Err(Error::custom("next_value_seed called before next_key_seed")),
         }
     }
@@ -1211,11 +1205,11 @@ impl<'de> de::MapAccess<'de> for MapDeserializer {
 
 struct EnumDeserializer {
     variant: String,
-    value: Option<ToonValue>,
+    value: Option<Value>,
 }
 
 impl EnumDeserializer {
-    fn new(variant: String, value: ToonValue) -> Self {
+    fn new(variant: String, value: Value) -> Self {
         EnumDeserializer {
             variant,
             value: Some(value),
@@ -1231,15 +1225,14 @@ impl<'de> de::EnumAccess<'de> for EnumDeserializer {
     where
         V: de::DeserializeSeed<'de>,
     {
-        let variant =
-            seed.deserialize(ToonValueDeserializer::new(ToonValue::String(self.variant)))?;
+        let variant = seed.deserialize(ValueDeserializer::new(Value::String(self.variant)))?;
         let visitor = VariantDeserializer { value: self.value };
         Ok((variant, visitor))
     }
 }
 
 struct VariantDeserializer {
-    value: Option<ToonValue>,
+    value: Option<Value>,
 }
 
 impl<'de> de::VariantAccess<'de> for VariantDeserializer {
@@ -1247,7 +1240,7 @@ impl<'de> de::VariantAccess<'de> for VariantDeserializer {
 
     fn unit_variant(self) -> Result<()> {
         match self.value {
-            Some(ToonValue::Null) | None => Ok(()),
+            Some(Value::Null) | None => Ok(()),
             _ => Err(Error::custom("Expected unit variant")),
         }
     }
@@ -1257,7 +1250,7 @@ impl<'de> de::VariantAccess<'de> for VariantDeserializer {
         T: de::DeserializeSeed<'de>,
     {
         match self.value {
-            Some(value) => seed.deserialize(ToonValueDeserializer::new(value)),
+            Some(value) => seed.deserialize(ValueDeserializer::new(value)),
             None => Err(Error::custom("Expected newtype variant")),
         }
     }
@@ -1267,7 +1260,7 @@ impl<'de> de::VariantAccess<'de> for VariantDeserializer {
         V: de::Visitor<'de>,
     {
         match self.value {
-            Some(ToonValue::Array(arr)) => visitor.visit_seq(SeqDeserializer::new(arr)),
+            Some(Value::Array(arr)) => visitor.visit_seq(SeqDeserializer::new(arr)),
             _ => Err(Error::custom("Expected tuple variant")),
         }
     }
@@ -1277,23 +1270,23 @@ impl<'de> de::VariantAccess<'de> for VariantDeserializer {
         V: de::Visitor<'de>,
     {
         match self.value {
-            Some(ToonValue::Object(obj)) => visitor.visit_map(MapDeserializer::new(obj)),
+            Some(Value::Object(obj)) => visitor.visit_map(MapDeserializer::new(obj)),
             _ => Err(Error::custom("Expected struct variant")),
         }
     }
 }
 
-struct ToonValueDeserializer {
-    value: ToonValue,
+struct ValueDeserializer {
+    value: Value,
 }
 
-impl ToonValueDeserializer {
-    fn new(value: ToonValue) -> Self {
-        ToonValueDeserializer { value }
+impl ValueDeserializer {
+    fn new(value: Value) -> Self {
+        ValueDeserializer { value }
     }
 }
 
-impl<'de> de::Deserializer<'de> for ToonValueDeserializer {
+impl<'de> de::Deserializer<'de> for ValueDeserializer {
     type Error = Error;
 
     fn deserialize_any<V>(self, visitor: V) -> Result<V::Value>
@@ -1301,17 +1294,17 @@ impl<'de> de::Deserializer<'de> for ToonValueDeserializer {
         V: de::Visitor<'de>,
     {
         match self.value {
-            ToonValue::Null => visitor.visit_unit(),
-            ToonValue::Bool(b) => visitor.visit_bool(b),
-            ToonValue::Number(Number::Integer(i)) => visitor.visit_i64(i),
-            ToonValue::Number(Number::Float(f)) => visitor.visit_f64(f),
-            ToonValue::Number(Number::Infinity) => visitor.visit_f64(f64::INFINITY),
-            ToonValue::Number(Number::NegativeInfinity) => visitor.visit_f64(f64::NEG_INFINITY),
-            ToonValue::Number(Number::NaN) => visitor.visit_f64(f64::NAN),
-            ToonValue::String(s) => visitor.visit_string(s),
-            ToonValue::Array(arr) => visitor.visit_seq(SeqDeserializer::new(arr)),
-            ToonValue::Object(obj) => visitor.visit_map(MapDeserializer::new(obj)),
-            ToonValue::Table { headers, rows } => {
+            Value::Null => visitor.visit_unit(),
+            Value::Bool(b) => visitor.visit_bool(b),
+            Value::Number(Number::Integer(i)) => visitor.visit_i64(i),
+            Value::Number(Number::Float(f)) => visitor.visit_f64(f),
+            Value::Number(Number::Infinity) => visitor.visit_f64(f64::INFINITY),
+            Value::Number(Number::NegativeInfinity) => visitor.visit_f64(f64::NEG_INFINITY),
+            Value::Number(Number::NaN) => visitor.visit_f64(f64::NAN),
+            Value::String(s) => visitor.visit_string(s),
+            Value::Array(arr) => visitor.visit_seq(SeqDeserializer::new(arr)),
+            Value::Object(obj) => visitor.visit_map(MapDeserializer::new(obj)),
+            Value::Table { headers, rows } => {
                 let mut objects = Vec::new();
                 for row in rows {
                     let mut obj = ToonMap::new();
@@ -1320,12 +1313,12 @@ impl<'de> de::Deserializer<'de> for ToonValueDeserializer {
                             obj.insert(header.clone(), value);
                         }
                     }
-                    objects.push(ToonValue::Object(obj));
+                    objects.push(Value::Object(obj));
                 }
                 visitor.visit_seq(SeqDeserializer::new(objects))
             }
-            ToonValue::Date(dt) => visitor.visit_string(dt.to_rfc3339()),
-            ToonValue::BigInt(bi) => visitor.visit_string(format!("{}n", bi)),
+            Value::Date(dt) => visitor.visit_string(dt.to_rfc3339()),
+            Value::BigInt(bi) => visitor.visit_string(format!("{}n", bi)),
         }
     }
 

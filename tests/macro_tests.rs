@@ -1,64 +1,64 @@
-use serde_toon::{toon, Number, ToonMap, ToonValue};
+use serde_toon::{toon, Number, ToonMap, Value};
 
 #[test]
 fn test_toon_macro_null() {
     let value = toon!(null);
-    assert_eq!(value, ToonValue::Null);
+    assert_eq!(value, Value::Null);
 }
 
 #[test]
 fn test_toon_macro_booleans() {
     let true_val = toon!(true);
-    assert_eq!(true_val, ToonValue::Bool(true));
+    assert_eq!(true_val, Value::Bool(true));
 
     let false_val = toon!(false);
-    assert_eq!(false_val, ToonValue::Bool(false));
+    assert_eq!(false_val, Value::Bool(false));
 }
 
 #[test]
 fn test_toon_macro_numbers() {
     let int_val = toon!(42);
-    assert_eq!(int_val, ToonValue::Number(Number::Integer(42)));
+    assert_eq!(int_val, Value::Number(Number::Integer(42)));
 
     let float_val = toon!(3.5);
-    assert_eq!(float_val, ToonValue::Number(Number::Float(3.5)));
+    assert_eq!(float_val, Value::Number(Number::Float(3.5)));
 
     let negative_val = toon!(-123);
-    assert_eq!(negative_val, ToonValue::Number(Number::Integer(-123)));
+    assert_eq!(negative_val, Value::Number(Number::Integer(-123)));
 }
 
 #[test]
 fn test_toon_macro_strings() {
     let string_val = toon!("hello world");
-    assert_eq!(string_val, ToonValue::String("hello world".to_string()));
+    assert_eq!(string_val, Value::String("hello world".to_string()));
 
     let empty_string = toon!("");
-    assert_eq!(empty_string, ToonValue::String("".to_string()));
+    assert_eq!(empty_string, Value::String("".to_string()));
 }
 
 #[test]
 fn test_toon_macro_arrays() {
     let empty_array = toon!([]);
-    assert_eq!(empty_array, ToonValue::Array(vec![]));
+    assert_eq!(empty_array, Value::Array(vec![]));
 
     let number_array = toon!([1, 2, 3]);
     assert_eq!(
         number_array,
-        ToonValue::Array(vec![
-            ToonValue::Number(Number::Integer(1)),
-            ToonValue::Number(Number::Integer(2)),
-            ToonValue::Number(Number::Integer(3)),
+        Value::Array(vec![
+            Value::Number(Number::Integer(1)),
+            Value::Number(Number::Integer(2)),
+            Value::Number(Number::Integer(3)),
         ])
     );
 
     let mixed_array = toon!([1, "hello", true, null]);
     assert_eq!(
         mixed_array,
-        ToonValue::Array(vec![
-            ToonValue::Number(Number::Integer(1)),
-            ToonValue::String("hello".to_string()),
-            ToonValue::Bool(true),
-            ToonValue::Null,
+        Value::Array(vec![
+            Value::Number(Number::Integer(1)),
+            Value::String("hello".to_string()),
+            Value::Bool(true),
+            Value::Null,
         ])
     );
 }
@@ -66,7 +66,7 @@ fn test_toon_macro_arrays() {
 #[test]
 fn test_toon_macro_objects() {
     let empty_object = toon!({});
-    assert_eq!(empty_object, ToonValue::Object(ToonMap::new()));
+    assert_eq!(empty_object, Value::Object(ToonMap::new()));
 
     let simple_object = toon!({
         "name": "Alice",
@@ -74,16 +74,10 @@ fn test_toon_macro_objects() {
     });
 
     match simple_object {
-        ToonValue::Object(ref obj) => {
+        Value::Object(ref obj) => {
             assert_eq!(obj.len(), 2);
-            assert_eq!(
-                obj.get("name"),
-                Some(&ToonValue::String("Alice".to_string()))
-            );
-            assert_eq!(
-                obj.get("age"),
-                Some(&ToonValue::Number(Number::Integer(30)))
-            );
+            assert_eq!(obj.get("name"), Some(&Value::String("Alice".to_string())));
+            assert_eq!(obj.get("age"), Some(&Value::Number(Number::Integer(30))));
         }
         _ => panic!("Expected object"),
     }
@@ -102,38 +96,29 @@ fn test_toon_macro_nested() {
     });
 
     match nested {
-        ToonValue::Object(ref obj) => {
+        Value::Object(ref obj) => {
             assert_eq!(obj.len(), 3);
 
             // Check user object
-            if let Some(ToonValue::Object(user)) = obj.get("user") {
-                assert_eq!(
-                    user.get("id"),
-                    Some(&ToonValue::Number(Number::Integer(123)))
-                );
-                assert_eq!(
-                    user.get("name"),
-                    Some(&ToonValue::String("Bob".to_string()))
-                );
-                assert_eq!(user.get("active"), Some(&ToonValue::Bool(true)));
+            if let Some(Value::Object(user)) = obj.get("user") {
+                assert_eq!(user.get("id"), Some(&Value::Number(Number::Integer(123))));
+                assert_eq!(user.get("name"), Some(&Value::String("Bob".to_string())));
+                assert_eq!(user.get("active"), Some(&Value::Bool(true)));
             } else {
                 panic!("Expected user to be an object");
             }
 
             // Check tags array
-            if let Some(ToonValue::Array(tags)) = obj.get("tags") {
+            if let Some(Value::Array(tags)) = obj.get("tags") {
                 assert_eq!(tags.len(), 2);
-                assert_eq!(tags[0], ToonValue::String("admin".to_string()));
-                assert_eq!(tags[1], ToonValue::String("developer".to_string()));
+                assert_eq!(tags[0], Value::String("admin".to_string()));
+                assert_eq!(tags[1], Value::String("developer".to_string()));
             } else {
                 panic!("Expected tags to be an array");
             }
 
             // Check count
-            assert_eq!(
-                obj.get("count"),
-                Some(&ToonValue::Number(Number::Integer(42)))
-            );
+            assert_eq!(obj.get("count"), Some(&Value::Number(Number::Integer(42))));
         }
         _ => panic!("Expected object"),
     }
@@ -169,21 +154,21 @@ fn test_toon_value_methods() {
 
 #[test]
 fn test_string_quoting_needs() {
-    let normal = ToonValue::String("hello".to_string());
+    let normal = Value::String("hello".to_string());
     assert!(!normal.needs_quotes());
 
-    let with_comma = ToonValue::String("hello,world".to_string());
+    let with_comma = Value::String("hello,world".to_string());
     assert!(with_comma.needs_quotes());
 
-    let with_colon = ToonValue::String("key:value".to_string());
+    let with_colon = Value::String("key:value".to_string());
     assert!(with_colon.needs_quotes());
 
-    let empty = ToonValue::String("".to_string());
+    let empty = Value::String("".to_string());
     assert!(empty.needs_quotes());
 
-    let boolean_like = ToonValue::String("true".to_string());
+    let boolean_like = Value::String("true".to_string());
     assert!(boolean_like.needs_quotes());
 
-    let number_like = ToonValue::String("123".to_string());
+    let number_like = Value::String("123".to_string());
     assert!(number_like.needs_quotes());
 }

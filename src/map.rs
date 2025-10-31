@@ -16,11 +16,11 @@
 //! ## Examples
 //!
 //! ```rust
-//! use serde_toon::{ToonMap, ToonValue};
+//! use serde_toon::{ToonMap, Value};
 //!
 //! let mut map = ToonMap::new();
-//! map.insert("name".to_string(), ToonValue::from("Alice"));
-//! map.insert("age".to_string(), ToonValue::from(30));
+//! map.insert("name".to_string(), Value::from("Alice"));
+//! map.insert("age".to_string(), Value::from(30));
 //!
 //! assert_eq!(map.len(), 2);
 //! assert_eq!(map.get("name").and_then(|v| v.as_str()), Some("Alice"));
@@ -37,18 +37,18 @@ use std::collections::HashMap;
 /// # Examples
 ///
 /// ```rust
-/// use serde_toon::{ToonMap, ToonValue};
+/// use serde_toon::{ToonMap, Value};
 ///
 /// let mut map = ToonMap::new();
-/// map.insert("first".to_string(), ToonValue::from(1));
-/// map.insert("second".to_string(), ToonValue::from(2));
+/// map.insert("first".to_string(), Value::from(1));
+/// map.insert("second".to_string(), Value::from(2));
 ///
 /// // Iteration maintains insertion order
 /// let keys: Vec<_> = map.keys().cloned().collect();
 /// assert_eq!(keys, vec!["first", "second"]);
 /// ```
 #[derive(Debug, Clone, PartialEq)]
-pub struct ToonMap(IndexMap<String, crate::ToonValue>);
+pub struct ToonMap(IndexMap<String, crate::Value>);
 
 impl ToonMap {
     /// Creates an empty `ToonMap`.
@@ -88,13 +88,13 @@ impl ToonMap {
     /// # Examples
     ///
     /// ```rust
-    /// use serde_toon::{ToonMap, ToonValue};
+    /// use serde_toon::{ToonMap, Value};
     ///
     /// let mut map = ToonMap::new();
-    /// assert!(map.insert("key".to_string(), ToonValue::from(42)).is_none());
-    /// assert!(map.insert("key".to_string(), ToonValue::from(43)).is_some());
+    /// assert!(map.insert("key".to_string(), Value::from(42)).is_none());
+    /// assert!(map.insert("key".to_string(), Value::from(43)).is_some());
     /// ```
-    pub fn insert(&mut self, key: String, value: crate::ToonValue) -> Option<crate::ToonValue> {
+    pub fn insert(&mut self, key: String, value: crate::Value) -> Option<crate::Value> {
         self.0.insert(key, value)
     }
 
@@ -103,14 +103,14 @@ impl ToonMap {
     /// # Examples
     ///
     /// ```rust
-    /// use serde_toon::{ToonMap, ToonValue};
+    /// use serde_toon::{ToonMap, Value};
     ///
     /// let mut map = ToonMap::new();
-    /// map.insert("key".to_string(), ToonValue::from(42));
+    /// map.insert("key".to_string(), Value::from(42));
     /// assert_eq!(map.get("key").and_then(|v| v.as_i64()), Some(42));
     /// ```
     #[must_use]
-    pub fn get(&self, key: &str) -> Option<&crate::ToonValue> {
+    pub fn get(&self, key: &str) -> Option<&crate::Value> {
         self.0.get(key)
     }
 
@@ -119,11 +119,11 @@ impl ToonMap {
     /// # Examples
     ///
     /// ```rust
-    /// use serde_toon::{ToonMap, ToonValue};
+    /// use serde_toon::{ToonMap, Value};
     ///
     /// let mut map = ToonMap::new();
     /// assert_eq!(map.len(), 0);
-    /// map.insert("key".to_string(), ToonValue::from(42));
+    /// map.insert("key".to_string(), Value::from(42));
     /// assert_eq!(map.len(), 1);
     /// ```
     #[must_use]
@@ -147,17 +147,17 @@ impl ToonMap {
     }
 
     /// Returns an iterator over the keys of the map, in insertion order.
-    pub fn keys(&self) -> indexmap::map::Keys<'_, String, crate::ToonValue> {
+    pub fn keys(&self) -> indexmap::map::Keys<'_, String, crate::Value> {
         self.0.keys()
     }
 
     /// Returns an iterator over the values of the map, in insertion order.
-    pub fn values(&self) -> indexmap::map::Values<'_, String, crate::ToonValue> {
+    pub fn values(&self) -> indexmap::map::Values<'_, String, crate::Value> {
         self.0.values()
     }
 
     /// Returns an iterator over the key-value pairs of the map, in insertion order.
-    pub fn iter(&self) -> indexmap::map::Iter<'_, String, crate::ToonValue> {
+    pub fn iter(&self) -> indexmap::map::Iter<'_, String, crate::Value> {
         self.0.iter()
     }
 }
@@ -168,29 +168,29 @@ impl Default for ToonMap {
     }
 }
 
-impl From<HashMap<String, crate::ToonValue>> for ToonMap {
-    fn from(map: HashMap<String, crate::ToonValue>) -> Self {
+impl From<HashMap<String, crate::Value>> for ToonMap {
+    fn from(map: HashMap<String, crate::Value>) -> Self {
         ToonMap(map.into_iter().collect())
     }
 }
 
-impl From<ToonMap> for HashMap<String, crate::ToonValue> {
+impl From<ToonMap> for HashMap<String, crate::Value> {
     fn from(map: ToonMap) -> Self {
         map.0.into_iter().collect()
     }
 }
 
 impl IntoIterator for ToonMap {
-    type Item = (String, crate::ToonValue);
-    type IntoIter = indexmap::map::IntoIter<String, crate::ToonValue>;
+    type Item = (String, crate::Value);
+    type IntoIter = indexmap::map::IntoIter<String, crate::Value>;
 
     fn into_iter(self) -> Self::IntoIter {
         self.0.into_iter()
     }
 }
 
-impl FromIterator<(String, crate::ToonValue)> for ToonMap {
-    fn from_iter<T: IntoIterator<Item = (String, crate::ToonValue)>>(iter: T) -> Self {
+impl FromIterator<(String, crate::Value)> for ToonMap {
+    fn from_iter<T: IntoIterator<Item = (String, crate::Value)>>(iter: T) -> Self {
         ToonMap(IndexMap::from_iter(iter))
     }
 }
