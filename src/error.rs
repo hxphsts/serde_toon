@@ -22,12 +22,13 @@
 //! ```rust
 //! use serde_toon::{from_str, Error};
 //!
-//! let result: Result<serde_toon::Value, Error> = from_str("invalid: [malformed");
+//! // The string on line 2 is never closed.
+//! let result: Result<serde_toon::Value, Error> = from_str("id: 1\nname: \"Ada");
 //! assert!(result.is_err());
 //!
 //! if let Err(err) = result {
-//!     eprintln!("Parse error: {}", err);
 //!     // Error messages include line numbers and suggestions
+//!     assert!(err.to_string().contains("line 2"));
 //! }
 //! ```
 

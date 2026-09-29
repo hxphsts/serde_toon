@@ -510,7 +510,7 @@ pub fn from_slice<'a, T>(v: &'a [u8]) -> Result<T>
 where
     T: Deserialize<'a>,
 {
-    let s = std::str::from_utf8(v).map_err(|e| Error::custom(e.to_string()))?;
+    let s = de::str_from_utf8(v)?;
     from_str(s)
 }
 
@@ -537,7 +537,7 @@ pub fn from_slice_with_options<'a, T>(v: &'a [u8], options: DecodeOptions) -> Re
 where
     T: Deserialize<'a>,
 {
-    let s = std::str::from_utf8(v).map_err(|e| Error::custom(e.to_string()))?;
+    let s = de::str_from_utf8(v)?;
     from_str_with_options(s, options)
 }
 
@@ -569,7 +569,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "pending decoder rewrite"]
     fn test_serialize_deserialize_user() {
         let user = User {
             id: 123,
@@ -584,7 +583,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "pending decoder rewrite"]
     fn test_pretty_printing() {
         let user = User {
             id: 123,
@@ -621,7 +619,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "pending decoder rewrite"]
     #[allow(deprecated)] // the length marker is accepted and ignored
     fn test_custom_options() {
         let user = User {

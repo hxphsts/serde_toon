@@ -91,6 +91,11 @@ pub(crate) fn value_needs_quotes(s: &str, delimiter: &Delimiter) -> bool {
     if matches!(first, b' ' | b'\t' | b'-' | b'#') || matches!(last, b' ' | b'\t') {
         return true;
     }
+    // Beyond §7.2: a leading U+FEFF would be stripped as a byte-order mark
+    // (§12) if the string opened the document, so quote it to round-trip.
+    if s.starts_with('\u{feff}') {
+        return true;
+    }
     if matches!(s, "true" | "false" | "null") || is_numeric_like(s) {
         return true;
     }
@@ -194,8 +199,21 @@ mod tests {
     fn value_quoting() {
         let c = Delimiter::Comma;
         for s in [
-            "", " a", "a ", "true", "null", "42", "-x", "-", "#tag", "a:b", "a,b", "[x", "q\"",
+            "",
+            " a",
+            "a ",
+            "true",
+            "null",
+            "42",
+            "-x",
+            "-",
+            "#tag",
+            "a:b",
+            "a,b",
+            "[x",
+            "q\"",
             "\u{1}",
+            "\u{feff}x",
         ] {
             assert!(value_needs_quotes(s, &c), "{s:?}");
         }

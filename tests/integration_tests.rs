@@ -27,7 +27,6 @@ struct Order {
 }
 
 #[test]
-#[ignore = "pending decoder rewrite"]
 fn test_simple_struct() {
     let user = User {
         id: 123,
@@ -44,7 +43,6 @@ fn test_simple_struct() {
 }
 
 #[test]
-#[ignore = "pending decoder rewrite"]
 fn test_nested_struct() {
     let order = Order {
         order_id: 12345,
@@ -115,7 +113,6 @@ fn test_primitives() {
 }
 
 #[test]
-#[ignore = "pending decoder rewrite"]
 #[allow(deprecated)] // `with_length_marker` is deprecated and ignored
 fn test_options() {
     let user = User {
@@ -179,7 +176,6 @@ fn test_to_value() {
 }
 
 #[test]
-#[ignore = "pending decoder rewrite"]
 fn test_empty_collections() {
     let empty_vec: Vec<i32> = vec![];
     assert_roundtrip(&empty_vec);
@@ -192,7 +188,6 @@ fn test_empty_collections() {
 }
 
 #[test]
-#[ignore = "pending decoder rewrite"]
 fn test_special_strings() {
     let special_strings = vec![
         "".to_string(),                // empty
