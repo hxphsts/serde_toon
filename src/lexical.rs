@@ -82,7 +82,7 @@ pub(crate) fn is_number_token(s: &str) -> bool {
 
 /// §7.2: whether a string *value* must be quoted when emitted in a context
 /// whose relevant delimiter is `delimiter` (§11.1).
-pub(crate) fn value_needs_quotes(s: &str, delimiter: Delimiter) -> bool {
+pub(crate) fn value_needs_quotes(s: &str, delimiter: &Delimiter) -> bool {
     let b = s.as_bytes();
     let Some((&first, &last)) = b.first().zip(b.last()) else {
         return true; // empty
@@ -178,14 +178,14 @@ mod tests {
             "", " a", "a ", "true", "null", "42", "-x", "-", "#tag", "a:b", "a,b", "[x", "q\"",
             "\u{1}",
         ] {
-            assert!(value_needs_quotes(s, c), "{s:?}");
+            assert!(value_needs_quotes(s, &c), "{s:?}");
         }
         for s in ["hello world", "a|b", "café", "x-y", "a.b"] {
-            assert!(!value_needs_quotes(s, c), "{s:?}");
+            assert!(!value_needs_quotes(s, &c), "{s:?}");
         }
-        assert!(value_needs_quotes("a|b", Delimiter::Pipe));
-        assert!(value_needs_quotes("a\tb", Delimiter::Tab));
-        assert!(!value_needs_quotes("a,b", Delimiter::Pipe));
+        assert!(value_needs_quotes("a|b", &Delimiter::Pipe));
+        assert!(value_needs_quotes("a\tb", &Delimiter::Tab));
+        assert!(!value_needs_quotes("a,b", &Delimiter::Pipe));
     }
 
     #[test]
