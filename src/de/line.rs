@@ -31,6 +31,11 @@ impl<'a> Line<'a> {
         self.lead + offset.min(self.content.len()) + 1
     }
 
+    /// 1-based line and column of the start of the content.
+    pub fn pos(&self) -> (usize, usize) {
+        (self.number, self.lead + 1)
+    }
+
     /// Whether this is a list-item line (§5.2): the bare marker `-` or a
     /// line starting with `- `. Returns the text after the marker.
     pub fn list_item(&self) -> Option<&'a str> {
@@ -131,7 +136,17 @@ pub(crate) fn split_lines<'a>(input: &'a str, options: &DecodeOptions) -> Result
 
 /// Trims U+0020 only (§12 token trimming), never other whitespace.
 pub(crate) fn trim_spaces(s: &str) -> &str {
-    s.trim_matches(' ')
+    let b = s.as_bytes();
+    let mut start = 0;
+    let mut end = b.len();
+    while start < end && b[start] == b' ' {
+        start += 1;
+    }
+    while end > start && b[end - 1] == b' ' {
+        end -= 1;
+    }
+    // Both bounds are next to ASCII spaces, hence char boundaries.
+    &s[start..end]
 }
 
 /// Index of the first unquoted occurrence of `a` or `b` in `s`, with the byte

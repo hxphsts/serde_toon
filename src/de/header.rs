@@ -17,7 +17,7 @@ const MAX_FIELD_DEPTH: usize = 64;
 #[derive(Debug)]
 pub(crate) enum LineKind<'a> {
     /// An array header or keyed header (§6).
-    Header(Header<'a>),
+    Header(Box<Header<'a>>),
     /// `key: value`; `value` is trimmed and may be empty.
     KeyValue { key: Cow<'a, str>, value: &'a str },
     /// A single primitive token (valid only as the root primitive).
@@ -112,7 +112,7 @@ pub(crate) fn classify<'a>(
     };
 
     match parse_header(key, &content[key_end..], line, options) {
-        Ok(header) => Ok(LineKind::Header(header)),
+        Ok(header) => Ok(LineKind::Header(Box::new(header))),
         Err(NotHeader::Fatal(e)) => Err(e),
         Err(NotHeader::Malformed(_)) if find_unquoted(content, b':').is_none() => {
             // No colon anywhere: not a header, not a key-value line.
@@ -447,7 +447,7 @@ mod tests {
 
     fn header<'a>(l: &'a Line<'a>, options: DecodeOptions) -> Result<Header<'a>> {
         match classify(l.content, l, &options)? {
-            LineKind::Header(h) => Ok(h),
+            LineKind::Header(h) => Ok(*h),
             other => panic!("not a header: {other:?}"),
         }
     }

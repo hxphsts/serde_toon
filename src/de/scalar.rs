@@ -192,6 +192,28 @@ pub(crate) fn split_key(content: &str) -> Option<(&str, &str)> {
 // Numbers
 // ---------------------------------------------------------------------------
 
+/// Fast path for the most common number token: `-?[0-9]{1,18}` without
+/// forbidden leading zeros (§4), which always fits an `i64`. Returns `None`
+/// for anything else, including valid numbers that need the general path.
+fn small_integer(text: &str) -> Option<i64> {
+    let b = text.as_bytes();
+    let (negative, digits) = match b.first()? {
+        b'-' => (true, &b[1..]),
+        _ => (false, b),
+    };
+    if digits.is_empty() || digits.len() > 18 || (digits[0] == b'0' && digits.len() > 1) {
+        return None;
+    }
+    let mut value: i64 = 0;
+    for &d in digits {
+        if !d.is_ascii_digit() {
+            return None;
+        }
+        value = value * 10 + i64::from(d - b'0');
+    }
+    Some(if negative { -value } else { value })
+}
+
 /// Whether a §4 number token has no fraction or exponent.
 fn is_integer_text(text: &str) -> bool {
     !text.bytes().any(|b| matches!(b, b'.' | b'e' | b'E'))
@@ -271,6 +293,11 @@ impl<'a> Token<'a> {
     /// Checked conversion of a number token to an integer type; never
     /// truncates.
     fn integer<T: FromToken>(&self) -> Result<T> {
+        if let Some(i) = small_integer(self.text) {
+            if let Some(v) = T::from_i128(i128::from(i)) {
+                return Ok(v);
+            }
+        }
         let Primitive::Number(text) = self.primitive()? else {
             return Err(self.mismatch(&format!("integer ({})", T::NAME)));
         };
@@ -351,6 +378,9 @@ impl<'de> de::Deserializer<'de> for ScalarDeserializer<'de> {
     type Error = Error;
 
     fn deserialize_any<V: Visitor<'de>>(self, visitor: V) -> Result<V::Value> {
+        if let Some(i) = small_integer(self.token.text) {
+            return visitor.visit_i64(i).map_err(|e| self.locate(e));
+        }
         let result = match self.token.primitive()? {
             Primitive::Null => visitor.visit_unit(),
             Primitive::Bool(b) => visitor.visit_bool(b),
@@ -612,6 +642,30 @@ mod tests {
             r#""a\"#,
         ] {
             assert!(unq(bad).is_err(), "{bad}");
+        }
+    }
+
+    #[test]
+    fn small_integers() {
+        assert_eq!(small_integer("0"), Some(0));
+        assert_eq!(small_integer("-0"), Some(0));
+        assert_eq!(small_integer("-123"), Some(-123));
+        assert_eq!(
+            small_integer("999999999999999999"),
+            Some(999_999_999_999_999_999)
+        );
+        for t in [
+            "",
+            "-",
+            "05",
+            "-01",
+            "1.5",
+            "1e3",
+            "+1",
+            "1_0",
+            "9999999999999999999",
+        ] {
+            assert_eq!(small_integer(t), None, "{t}");
         }
     }
 

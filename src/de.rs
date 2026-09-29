@@ -276,14 +276,14 @@ impl<'de> Deserializer<'de> {
             return Err(err);
         }
         let Some(&first) = self.peek() else {
-            return Ok(Node::EmptyObject);
+            return Ok(Node::EmptyObject((1, 1)));
         };
         if first.depth != 0 {
             return Err(self.indentation(&first, 0, "the first line must not be indented"));
         }
         self.pos += 1;
         if first.content == "[]" {
-            return Ok(Node::EmptyArray);
+            return Ok(Node::EmptyArray(first.pos()));
         }
         let kind = classify(first.content, &first, &self.options)?;
         Ok(match kind {
@@ -322,11 +322,11 @@ impl<'de> Deserializer<'de> {
             };
         }
         if value == "[]" {
-            return Node::EmptyArray;
+            return Node::EmptyArray((line.number, line.col_of(value)));
         }
         if self.compat() && value.starts_with('[') {
             if let Some(header) = parse_legacy_value_header(value, &line, &self.options) {
-                return Node::array(header, depth, line);
+                return Node::array(Box::new(header), depth, line);
             }
         }
         Node::Scalar(Token::new(value, &line))
@@ -337,7 +337,7 @@ impl<'de> Deserializer<'de> {
     fn item_node(&self, rest: &'de str, depth: usize, line: Line<'de>) -> Result<Node<'de>> {
         if rest.is_empty() {
             return Ok(if self.strict() {
-                Node::EmptyObject
+                Node::EmptyObject(line.pos())
             } else {
                 Node::Block {
                     parent: depth,
@@ -346,7 +346,7 @@ impl<'de> Deserializer<'de> {
             });
         }
         if rest == "[]" {
-            return Ok(Node::EmptyArray);
+            return Ok(Node::EmptyArray((line.number, line.col_of(rest))));
         }
         Ok(match classify(rest, &line, &self.options)? {
             LineKind::Header(header) if header.key.is_none() => {
@@ -373,6 +373,21 @@ impl<'de> Deserializer<'de> {
     }
 }
 
+/// Decodes byte input as UTF-8 (§4), reporting the line and column of the
+/// first ill-formed sequence.
+pub(crate) fn str_from_utf8(bytes: &[u8]) -> Result<&str> {
+    std::str::from_utf8(bytes).map_err(|e| {
+        let valid = &bytes[..e.valid_up_to()];
+        let line = valid.iter().filter(|&&b| b == b'\n').count() + 1;
+        let line_start = valid.iter().rposition(|&b| b == b'\n').map_or(0, |i| i + 1);
+        let col = String::from_utf8_lossy(&valid[line_start..])
+            .chars()
+            .count()
+            + 1;
+        Error::syntax(line, col, &format!("invalid UTF-8: {e}"))
+    })
+}
+
 fn missing_colon(line: &Line<'_>) -> Error {
     Error::syntax_with_context(
         line.number,
@@ -395,14 +410,17 @@ fn count_error(line: &Line<'_>, what: &str, declared: usize, found: usize) -> Er
 // Nodes: what the next value is
 // ---------------------------------------------------------------------------
 
+/// A 1-based line and column.
+type Pos = (usize, usize);
+
 /// A value located in the document, not yet deserialized.
 enum Node<'de> {
     /// A primitive token.
     Scalar(Token<'de>),
     /// `key: []`, `- []` or a root `[]`.
-    EmptyArray,
+    EmptyArray(Pos),
     /// An empty object (empty document, bare `-` list item).
-    EmptyObject,
+    EmptyObject(Pos),
     /// `key:` with nothing after the colon: an object whose fields are the
     /// lines below `parent`, if any.
     Block { parent: usize, line: Line<'de> },
@@ -414,20 +432,20 @@ enum Node<'de> {
     },
     /// An array header standing at `parent`.
     Array {
-        header: Header<'de>,
+        header: Box<Header<'de>>,
         parent: usize,
         line: Line<'de>,
     },
     /// A keyed tabular header standing at `parent` (§9.5).
     Keyed {
-        header: Header<'de>,
+        header: Box<Header<'de>>,
         parent: usize,
         line: Line<'de>,
     },
 }
 
 impl<'de> Node<'de> {
-    fn array(header: Header<'de>, parent: usize, line: Line<'de>) -> Self {
+    fn array(header: Box<Header<'de>>, parent: usize, line: Line<'de>) -> Self {
         if header.keyed {
             Node::Keyed {
                 header,
@@ -493,8 +511,12 @@ impl<'a, 'de> de::Deserializer<'de> for ValueDeserializer<'a, 'de> {
     fn deserialize_any<V: Visitor<'de>>(self, visitor: V) -> Result<V::Value> {
         match self.node {
             Node::Scalar(token) => Self::scalar(token, self.de).deserialize_any(visitor),
-            Node::EmptyArray => visitor.visit_seq(Empty),
-            Node::EmptyObject => visitor.visit_map(Empty),
+            Node::EmptyArray((line, col)) => {
+                visitor.visit_seq(Empty).map_err(|e| locate(e, line, col))
+            }
+            Node::EmptyObject((line, col)) => {
+                visitor.visit_map(Empty).map_err(|e| locate(e, line, col))
+            }
             Node::Block { .. } | Node::Fields { .. } => match self.object()? {
                 None => visitor.visit_map(Empty),
                 Some((de, depth, first, line)) => {
@@ -557,7 +579,7 @@ impl<'a, 'de> de::Deserializer<'de> for ValueDeserializer<'a, 'de> {
             Node::Scalar(token) => Self::scalar(token, self.de).deserialize_unit(visitor),
             // An empty document or `key:` decodes to `{}`, which is how a
             // unit (struct) is naturally written.
-            Node::EmptyObject => visitor.visit_unit(),
+            Node::EmptyObject(_) => visitor.visit_unit(),
             Node::Block { parent, .. } if self.de.child_depth(parent)?.is_none() => {
                 visitor.visit_unit()
             }
@@ -910,7 +932,7 @@ enum ArrayKind<'de> {
 
 struct ArraySeq<'a, 'de> {
     de: &'a mut Deserializer<'de>,
-    header: Header<'de>,
+    header: Box<Header<'de>>,
     line: Line<'de>,
     kind: ArrayKind<'de>,
     count: usize,
@@ -921,7 +943,7 @@ struct ArraySeq<'a, 'de> {
 impl<'a, 'de> ArraySeq<'a, 'de> {
     fn new(
         de: &'a mut Deserializer<'de>,
-        header: Header<'de>,
+        header: Box<Header<'de>>,
         parent: usize,
         line: Line<'de>,
     ) -> Result<Self> {
@@ -1196,7 +1218,7 @@ impl<'s, 'de> de::MapAccess<'de> for RowMap<'s, 'de> {
 
 struct KeyedMap<'a, 'de> {
     de: &'a mut Deserializer<'de>,
-    header: Header<'de>,
+    header: Box<Header<'de>>,
     line: Line<'de>,
     depth: Option<usize>,
     count: usize,
@@ -1208,7 +1230,7 @@ struct KeyedMap<'a, 'de> {
 impl<'a, 'de> KeyedMap<'a, 'de> {
     fn new(
         de: &'a mut Deserializer<'de>,
-        header: Header<'de>,
+        header: Box<Header<'de>>,
         parent: usize,
         line: Line<'de>,
     ) -> Result<Self> {
