@@ -598,3 +598,80 @@ fn debug_output() {
         "{s}"
     );
 }
+
+// ---------------------------------------------------------------------------
+// Structure edge cases
+// ---------------------------------------------------------------------------
+
+#[test]
+fn list_item_object_scopes() {
+    let input = "\
+items[2]:
+  - a: 1
+    b:
+      c: 2
+    d[2]: x,y
+  - matrix[1]:
+      - [2]: 1,2
+    e: end";
+    let v: Map = strict(input).unwrap();
+    let json = serde_json::to_string(&v).unwrap();
+    assert_eq!(
+        json,
+        r#"{"items":[{"a":1,"b":{"c":2},"d":["x","y"]},{"matrix":[[1,2]],"e":"end"}]}"#
+    );
+}
+
+#[test]
+fn non_strict_adopts_a_deeper_block_indentation() {
+    // Four-space indentation decoded with the default indent size of 2.
+    let v: Map = from_str("a:\n    b: 1\n    c:\n        d: 2\ne: 3").unwrap();
+    let json = serde_json::to_string(&v).unwrap();
+    assert_eq!(json, r#"{"a":{"b":1,"c":{"d":2}},"e":3}"#);
+    // Strict mode reports the depth jump.
+    assert_error_line(strict::<Map>("a:\n    b: 1"), 2);
+}
+
+#[test]
+fn rows_end_at_a_key_value_line() {
+    // §9.3: at row depth, colon-before-delimiter ends the rows; in a
+    // list-item object the line is the next field.
+    let input = "\
+items[1]:
+  - t[2]{a,b}:
+      1,2
+      3,4
+    n: 1";
+    let v: Map = strict(input).unwrap();
+    let json = serde_json::to_string(&v).unwrap();
+    assert_eq!(
+        json,
+        r#"{"items":[{"t":[{"a":1,"b":2},{"a":3,"b":4}],"n":1}]}"#
+    );
+}
+
+#[test]
+fn ignored_fields_are_skipped_whole() {
+    #[derive(Deserialize, Debug, PartialEq)]
+    struct Only {
+        keep: u8,
+    }
+    let input = "\
+skip:
+  deep[2]{a,b{c,d}}:
+    1,2,3
+    4,5,6
+  list[1]:
+    - x: 1
+keep: 7
+rows[1]{a}:
+  1";
+    assert_eq!(strict::<Only>(input).unwrap(), Only { keep: 7 });
+    // Ignored nested groups still consume their cells.
+    #[derive(Deserialize, Debug, PartialEq)]
+    struct Row {
+        z: u8,
+    }
+    let rows: Vec<Row> = strict("[1]{a,b{c,d},z}:\n  1,2,3,9").unwrap();
+    assert_eq!(rows, [Row { z: 9 }]);
+}
