@@ -839,8 +839,10 @@ fn additions_0_3() {
     decode_options_traits::<DecodeOptions>();
     assert_eq!(DecodeOptions::default(), DecodeOptions::compatible());
 
-    // Derives added to existing types in 0.3.0.
-    fn delimiter_traits<T: Copy + Eq + std::hash::Hash>() {}
+    // Derives added to existing types in 0.3.0. `Delimiter` is deliberately
+    // NOT `Copy`: adding `Copy` to an existing public type changes closure
+    // capture semantics, which cargo-semver-checks treats as breaking.
+    fn delimiter_traits<T: Clone + Eq + std::hash::Hash>() {}
     delimiter_traits::<Delimiter>();
     fn options_traits<T: PartialEq>() {}
     options_traits::<ToonOptions>();

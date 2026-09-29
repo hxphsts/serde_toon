@@ -40,7 +40,7 @@
 /// assert_eq!(Delimiter::Tab.as_str(), "\t");
 /// assert_eq!(Delimiter::Pipe.as_str(), "|");
 /// ```
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Default)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash, Default)]
 pub enum Delimiter {
     /// Comma delimiter (`,`). This is the default.
     #[default]
@@ -71,7 +71,7 @@ impl Delimiter {
     }
 
     /// The delimiter as a single ASCII byte.
-    pub(crate) const fn as_byte(self) -> u8 {
+    pub(crate) const fn as_byte(&self) -> u8 {
         match self {
             Delimiter::Comma => b',',
             Delimiter::Tab => b'\t',
@@ -81,7 +81,7 @@ impl Delimiter {
 
     /// The symbol declared inside an array header's brackets (§6): nothing
     /// for comma, the delimiter itself otherwise.
-    pub(crate) const fn header_symbol(self) -> &'static str {
+    pub(crate) const fn header_symbol(&self) -> &'static str {
         match self {
             Delimiter::Comma => "",
             Delimiter::Tab => "\t",
