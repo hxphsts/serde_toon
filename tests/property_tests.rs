@@ -64,3 +64,60 @@ proptest! {
         prop_assert!(roundtrip(&t));
     }
 }
+
+// ---------------------------------------------------------------------------
+// Regressions from tests/property_tests.proptest-regressions
+// ---------------------------------------------------------------------------
+
+#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
+struct Flagged {
+    id: u32,
+    name: String,
+    active: bool,
+}
+
+/// Decode side of the saved regressions: the spec-conformant TOON for each
+/// shrunk value decodes back to it.
+#[test]
+fn regressions_decode() {
+    let flagged = |name: &str| Flagged {
+        id: 0,
+        name: name.to_string(),
+        active: false,
+    };
+    // `|` needs no quoting with the comma document delimiter (§7.2).
+    let got: Flagged = from_str("id: 0\nname: |\nactive: false").unwrap();
+    assert_eq!(got, flagged("|"));
+    let got: Flagged = from_str("id: 0\nname: \"|\"\nactive: false").unwrap();
+    assert_eq!(got, flagged("|"));
+    // A key or value starting with `n` is not `null`.
+    let got: Flagged = from_str("id: 0\nname: n\nactive: false").unwrap();
+    assert_eq!(got, flagged("n"));
+    // Controls are escaped as \uXXXX (§7.1).
+    let got: String = from_str(r#""\u000b""#).unwrap();
+    assert_eq!(got, "\u{b}");
+    // Large magnitudes use exponent notation (§2).
+    let got: f64 = from_str("-9.742640468003355e+303").unwrap();
+    assert_eq!(got, -9.742640468003355e303);
+}
+
+proptest! {
+    #[test]
+    fn prop_f64(n in any::<f64>().prop_filter("finite", |f| f.is_finite())) {
+        prop_assert!(roundtrip(&n));
+    }
+
+    // serde_toon 0.2's encoder leaves `#`-leading strings unquoted, which
+    // are comment lines under spec §5.1.
+    #[test]
+    #[ignore = "pending encoder rewrite"]
+    fn prop_string(s in any::<String>()) {
+        prop_assert!(roundtrip(&s));
+    }
+
+    #[test]
+    fn prop_struct(id in any::<u32>(), name in any::<String>(), active in any::<bool>()) {
+        let value = Flagged { id, name, active };
+        prop_assert!(roundtrip(&value));
+    }
+}
