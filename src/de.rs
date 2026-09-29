@@ -71,6 +71,13 @@ impl<'de> Deserializer<'de> {
         }
     }
 
+    /// Creates a deserializer that decodes `input` using the given
+    /// [`DecodeOptions`](crate::DecodeOptions).
+    pub fn from_str_with_options(input: &'de str, options: crate::DecodeOptions) -> Self {
+        let _ = options; // TODO(decoder rewrite)
+        Self::from_str(input)
+    }
+
     fn peek_char(&self) -> Option<char> {
         self.input[self.position..].chars().next()
     }

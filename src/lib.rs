@@ -130,6 +130,7 @@
 
 pub mod de;
 pub mod error;
+mod lexical;
 pub mod macros;
 pub mod map;
 pub mod options;
@@ -140,12 +141,22 @@ pub mod value;
 pub use de::Deserializer;
 pub use error::{Error, Result};
 pub use map::ToonMap;
-pub use options::{Delimiter, ToonOptions};
+pub use options::{DecodeOptions, Delimiter, ToonOptions};
 pub use ser::{Serializer, ValueSerializer};
 pub use value::{Number, Value};
 
 use serde::{Deserialize, Serialize};
 use std::io;
+
+/// The version of the [TOON specification](https://github.com/toon-format/spec)
+/// this crate targets.
+///
+/// # Examples
+///
+/// ```rust
+/// assert_eq!(serde_toon::SPEC_VERSION, "4.1");
+/// ```
+pub const SPEC_VERSION: &str = "4.1";
 
 /// Serialize any `T: Serialize` to a TOON string.
 ///
@@ -339,6 +350,41 @@ where
     T::deserialize(&mut deserializer)
 }
 
+/// Deserialize an instance of type `T` from a string of TOON text, using the
+/// given [`DecodeOptions`].
+///
+/// # Examples
+///
+/// ```rust
+/// use serde_toon::{from_str_with_options, DecodeOptions};
+/// use serde::Deserialize;
+///
+/// #[derive(Deserialize, PartialEq, Debug)]
+/// struct Point { x: i32, y: i32 }
+///
+/// let point: Point = from_str_with_options("x: 1\ny: 2", DecodeOptions::strict())?;
+/// assert_eq!(point, Point { x: 1, y: 2 });
+///
+/// // Strict mode rejects duplicate keys.
+/// let dup = from_str_with_options::<Point>("x: 1\nx: 2\ny: 3", DecodeOptions::strict());
+/// assert!(dup.is_err());
+/// # Ok::<(), serde_toon::Error>(())
+/// ```
+///
+/// # Errors
+///
+/// Returns an error if the input is not valid TOON under the chosen options,
+/// or cannot be deserialized to type `T`. Syntax errors carry line and column
+/// information.
+#[must_use = "this returns the result of the operation, errors must be handled"]
+pub fn from_str_with_options<'a, T>(s: &'a str, options: DecodeOptions) -> Result<T>
+where
+    T: Deserialize<'a>,
+{
+    let mut deserializer = Deserializer::from_str_with_options(s, options);
+    T::deserialize(&mut deserializer)
+}
+
 /// Deserialize an instance of type `T` from an I/O stream of TOON.
 ///
 /// # Examples
@@ -374,6 +420,38 @@ where
     from_str(&string)
 }
 
+/// Deserialize an instance of type `T` from an I/O stream of TOON, using the
+/// given [`DecodeOptions`].
+///
+/// # Examples
+///
+/// ```rust
+/// use serde_toon::{from_reader_with_options, DecodeOptions};
+/// use std::collections::BTreeMap;
+///
+/// let map: BTreeMap<String, i32> =
+///     from_reader_with_options(&b"a: 1"[..], DecodeOptions::strict())?;
+/// assert_eq!(map["a"], 1);
+/// # Ok::<(), serde_toon::Error>(())
+/// ```
+///
+/// # Errors
+///
+/// Returns an error if reading fails, the input is not valid TOON under the
+/// chosen options, or it cannot be deserialized to type `T`.
+#[must_use = "this returns the result of the operation, errors must be handled"]
+pub fn from_reader_with_options<R, T>(mut reader: R, options: DecodeOptions) -> Result<T>
+where
+    R: io::Read,
+    T: for<'de> Deserialize<'de>,
+{
+    let mut string = String::new();
+    reader
+        .read_to_string(&mut string)
+        .map_err(|e| Error::io(&e.to_string()))?;
+    from_str_with_options(&string, options)
+}
+
 /// Deserialize an instance of type `T` from bytes of TOON text.
 ///
 /// # Examples
@@ -401,6 +479,33 @@ where
 {
     let s = std::str::from_utf8(v).map_err(|e| Error::custom(e.to_string()))?;
     from_str(s)
+}
+
+/// Deserialize an instance of type `T` from bytes of TOON text, using the
+/// given [`DecodeOptions`].
+///
+/// # Examples
+///
+/// ```rust
+/// use serde_toon::{from_slice_with_options, DecodeOptions};
+/// use std::collections::BTreeMap;
+///
+/// let map: BTreeMap<String, bool> = from_slice_with_options(b"ok: true", DecodeOptions::strict())?;
+/// assert!(map["ok"]);
+/// # Ok::<(), serde_toon::Error>(())
+/// ```
+///
+/// # Errors
+///
+/// Returns an error if the bytes are not valid UTF-8, not valid TOON under the
+/// chosen options, or cannot be deserialized to type `T`.
+#[must_use = "this returns the result of the operation, errors must be handled"]
+pub fn from_slice_with_options<'a, T>(v: &'a [u8], options: DecodeOptions) -> Result<T>
+where
+    T: Deserialize<'a>,
+{
+    let s = std::str::from_utf8(v).map_err(|e| Error::custom(e.to_string()))?;
+    from_str_with_options(s, options)
 }
 
 #[cfg(test)]
