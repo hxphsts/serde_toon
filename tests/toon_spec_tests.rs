@@ -33,11 +33,8 @@ fn test_tabular_array_format() {
     let toon = to_string(&users).unwrap();
     println!("Tabular format:\n{}", toon);
 
-    // Should be in tabular format: [2]{id,name,role}:
-    assert!(toon.contains("[2]{"));
-    assert!(toon.contains("id,name,role"));
-    assert!(toon.contains("1,Alice,admin"));
-    assert!(toon.contains("2,Bob,user"));
+    // Tabular format, fields in declaration order (TOON spec §9.3).
+    assert_eq!(toon, "[2]{id,name,role}:\n  1,Alice,admin\n  2,Bob,user");
 }
 
 #[test]
@@ -46,9 +43,8 @@ fn test_inline_primitive_array() {
     let toon = to_string(&tags).unwrap();
     println!("Inline array:\n{}", toon);
 
-    // Should be inline format: [3]: admin,developer,ops
-    assert!(toon.starts_with("[3]: "));
-    assert!(toon.contains("admin,developer,ops"));
+    // Inline format (TOON spec §9.1).
+    assert_eq!(toon, "[3]: admin,developer,ops");
 }
 
 #[test]
@@ -70,9 +66,12 @@ fn test_tab_delimiter() {
     let toon = to_string_with_options(&products, options).unwrap();
     println!("Tab-delimited tabular:\n{}", toon);
 
-    // Should show tab delimiter in header
-    assert!(toon.contains("[2    ]{"));
-    assert!(toon.contains("price    qty    sku"));
+    // The header declares the tab delimiter with a literal HTAB inside the
+    // brackets, and the field list uses it too (TOON spec §6, §11).
+    assert_eq!(
+        toon,
+        "[2\t]{sku\tqty\tprice}:\n  A1\t2\t9.99\n  B2\t1\t14.5"
+    );
 }
 
 #[test]
@@ -95,11 +94,11 @@ fn test_pipe_delimiter() {
     println!("Pipe-delimited tabular:\n{}", toon);
 
     // Should show pipe delimiter in header
-    assert!(toon.contains("[2|]{"));
-    assert!(toon.contains("price|qty|sku"));
+    assert_eq!(toon, "[2|]{sku|qty|price}:\n  A1|2|9.99\n  B2|1|14.5");
 }
 
 #[test]
+#[allow(deprecated)] // `with_length_marker` is deprecated and ignored
 fn test_length_marker() {
     let tags = vec!["rust", "serde", "toon"];
 
@@ -107,8 +106,8 @@ fn test_length_marker() {
     let toon = to_string_with_options(&tags, options).unwrap();
     println!("With length marker:\n{}", toon);
 
-    // Should have # prefix in length
-    assert!(toon.starts_with("[#3]: "));
+    // TOON v2+ forbids length markers, so the option is ignored.
+    assert_eq!(toon, "[3]: rust,serde,toon");
 }
 
 #[test]
@@ -124,13 +123,9 @@ fn test_mixed_array_list_format() {
     let toon = to_string(&mixed).unwrap();
     println!("Mixed array (list format):\n{}", toon);
 
-    // Should use list format with "- " prefix
-    assert!(toon.contains("[3]:"));
-    assert!(toon.contains("- 1"));
-    // Fields are sorted alphabetically, so "age" comes before "name"
-    assert!(toon.contains("- age: 30"));
-    assert!(toon.contains("name: Alice"));
-    assert!(toon.contains("- text"));
+    // List format with "- " prefix; object fields keep their encounter
+    // order, the first on the hyphen line (TOON spec §9.4, §10).
+    assert_eq!(toon, "[3]:\n  - 1\n  - name: Alice\n    age: 30\n  - text");
 }
 
 #[test]
@@ -139,7 +134,8 @@ fn test_empty_array() {
     let toon = to_string(&empty).unwrap();
     println!("Empty array:\n{}", toon);
 
-    assert_eq!(toon, "[0]:");
+    // Empty root arrays are written `[]` (TOON spec §9.1).
+    assert_eq!(toon, "[]");
 }
 
 #[test]
