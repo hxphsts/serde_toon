@@ -28,6 +28,8 @@ thiserror = "1.0"
 serde_json = { version = "1.0", features = ["preserve_order"] }
 proptest = "1.4"
 criterion = "0.5"
+# Head-to-head benchmark against the official TOON crate (benches/vs_toon_format.rs).
+toon-format = { version = "0.5", default-features = false }
 
 [lib]
 name = "serde_toon"
@@ -59,4 +61,8 @@ path = "examples/token_efficiency.rs"
 
 [[bench]]
 name = "serialization"
+harness = false
+
+[[bench]]
+name = "vs_toon_format"
 harness = false
