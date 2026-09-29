@@ -49,3 +49,26 @@ jobs:
       - run: cargo doc --no-deps
         env:
           RUSTDOCFLAGS: -D warnings
+
+  semver:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      # Compares the public API against the latest release on crates.io.
+      - uses: obi1kenobi/cargo-semver-checks-action@v2
+
+  msrv:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      # Cargo 1.70 predates MSRV-aware resolution (and the 2024 edition used by
+      # the newest releases of some dependencies), so resolve the lockfile with
+      # stable Cargo, preferring versions compatible with `rust-version`.
+      - uses: dtolnay/rust-toolchain@stable
+      - run: cargo generate-lockfile
+        env:
+          CARGO_RESOLVER_INCOMPATIBLE_RUST_VERSIONS: fallback
+      # serde >= 1.0.229 pins a serde_derive built on syn 3 (Rust 1.71+).
+      - run: cargo update -p serde --precise 1.0.228
+      - uses: dtolnay/rust-toolchain@1.70
+      - run: cargo check --lib
