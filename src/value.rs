@@ -484,23 +484,25 @@ impl Value {
         }
     }
 
+    /// Returns `true` if this is a string that the encoder must quote as an
+    /// object field value with the default comma delimiter (TOON spec §7.2).
+    /// Non-string values are never quoted.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use serde_toon::Value;
+    ///
+    /// assert!(Value::from("a,b").needs_quotes());
+    /// assert!(Value::from("42").needs_quotes());
+    /// assert!(Value::from("-item").needs_quotes());
+    /// assert!(!Value::from("hello world").needs_quotes());
+    /// assert!(!Value::from(42).needs_quotes());
+    /// ```
     #[inline]
     pub fn needs_quotes(&self) -> bool {
         match self {
-            Value::String(s) => {
-                s.is_empty()
-                    || s.contains(':')
-                    || s.contains(',')
-                    || s.contains('\n')
-                    || s.contains('\t')
-                    || s.contains('|')
-                    || s.starts_with(' ')
-                    || s.ends_with(' ')
-                    || s == "true"
-                    || s == "false"
-                    || s == "null"
-                    || s.parse::<f64>().is_ok()
-            }
+            Value::String(s) => crate::lexical::value_needs_quotes(s, &crate::Delimiter::Comma),
             _ => false,
         }
     }
