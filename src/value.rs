@@ -614,11 +614,25 @@ impl<'de> Deserialize<'de> for Value {
             }
 
             fn visit_u64<E>(self, value: u64) -> Result<Self::Value, E> {
-                if value <= i64::MAX as u64 {
-                    Ok(Value::Number(Number::Integer(value as i64)))
-                } else {
-                    Ok(Value::Number(Number::Float(value as f64)))
-                }
+                // Lossless: integers beyond i64 become BigInt, never f64.
+                Ok(match i64::try_from(value) {
+                    Ok(i) => Value::Number(Number::Integer(i)),
+                    Err(_) => Value::BigInt(BigInt::from(value)),
+                })
+            }
+
+            fn visit_i128<E>(self, value: i128) -> Result<Self::Value, E> {
+                Ok(match i64::try_from(value) {
+                    Ok(i) => Value::Number(Number::Integer(i)),
+                    Err(_) => Value::BigInt(BigInt::from(value)),
+                })
+            }
+
+            fn visit_u128<E>(self, value: u128) -> Result<Self::Value, E> {
+                Ok(match i64::try_from(value) {
+                    Ok(i) => Value::Number(Number::Integer(i)),
+                    Err(_) => Value::BigInt(BigInt::from(value)),
+                })
             }
 
             fn visit_f64<E>(self, value: f64) -> Result<Self::Value, E> {
