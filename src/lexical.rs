@@ -77,7 +77,7 @@ pub(crate) fn is_number_token(s: &str) -> bool {
     }
     let digits = s.strip_prefix('-').unwrap_or(s).as_bytes();
     // The grammar guarantees at least one leading digit.
-    !(digits[0] == b'0' && digits.get(1).map_or(false, u8::is_ascii_digit))
+    !(digits[0] == b'0' && digits.get(1).is_some_and(u8::is_ascii_digit))
 }
 
 /// §7.2: whether a string *value* must be quoted when emitted in a context
