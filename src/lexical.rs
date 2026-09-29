@@ -71,6 +71,7 @@ pub(crate) fn is_numeric_like(s: &str) -> bool {
 /// `/^-?[0-9]+(?:\.[0-9]+)?(?:e[+-]?[0-9]+)?$/i` and its integer part has no
 /// forbidden leading zeros (`05`, `-0001` are strings; `0.5`, `0e1` are
 /// numbers).
+#[allow(dead_code)] // used by decoder
 pub(crate) fn is_number_token(s: &str) -> bool {
     if !matches_decimal_grammar(s, false) {
         return false;
@@ -94,10 +95,28 @@ pub(crate) fn value_needs_quotes(s: &str, delimiter: &Delimiter) -> bool {
         return true;
     }
     let delim = delimiter.as_byte();
-    b.iter().any(|&c| {
-        c == delim || c < 0x20 || matches!(c, b':' | b'"' | b'\\' | b'[' | b']' | b'{' | b'}')
-    })
+    b.iter().any(|&c| QUOTE_BYTES[usize::from(c)] || c == delim)
 }
+
+/// Bytes whose presence anywhere in a string value forces quoting (§7.2),
+/// apart from the delimiter: controls U+0000–U+001F, `:`, `"`, `\`, and
+/// brackets and braces. A table keeps the per-byte check to one load.
+const QUOTE_BYTES: [bool; 256] = {
+    let mut table = [false; 256];
+    let mut c = 0;
+    while c < 0x20 {
+        table[c] = true;
+        c += 1;
+    }
+    table[b':' as usize] = true;
+    table[b'"' as usize] = true;
+    table[b'\\' as usize] = true;
+    table[b'[' as usize] = true;
+    table[b']' as usize] = true;
+    table[b'{' as usize] = true;
+    table[b'}' as usize] = true;
+    table
+};
 
 /// §7.1: append `s` to `out` as a quoted string, escaping `\\`, `"`, `\n`,
 /// `\r`, `\t` and every other U+0000–U+001F control as lowercase `\uXXXX`.

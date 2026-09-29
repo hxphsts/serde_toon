@@ -44,11 +44,11 @@ fn main() -> Result<(), Box<dyn Error>> {
     let pipe_format = to_string_with_options(&data, pipe_options)?;
     println!("{}\n", pipe_format);
 
-    // Custom length marker
-    println!("Custom length marker (#):");
-    let marked_options = ToonOptions::new().with_length_marker('#');
-    let marked = to_string_with_options(&data, marked_options)?;
-    println!("{}\n", marked);
+    // Custom indentation (rows are indented one level under the header)
+    println!("Four-space indentation:");
+    let indent_options = ToonOptions::new().with_indent(4);
+    let indented = to_string_with_options(&data, indent_options)?;
+    println!("{}\n", indented);
 
     // Primitive arrays show delimiters clearly
     println!("Primitive arrays with different delimiters:");

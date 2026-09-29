@@ -11,142 +11,6 @@
 # Initially populated with every case the serde_toon 0.2.0 encoder/decoder
 # fails.
 
-# encode/arrays-nested.json
-encode/arrays-nested.json#0
-encode/arrays-nested.json#1
-encode/arrays-nested.json#2
-encode/arrays-nested.json#3
-encode/arrays-nested.json#7
-encode/arrays-nested.json#8
-encode/arrays-nested.json#9
-encode/arrays-nested.json#10
-encode/arrays-nested.json#11
-encode/arrays-nested.json#12
-encode/arrays-nested.json#13
-encode/arrays-nested.json#14
-
-# encode/arrays-objects.json
-encode/arrays-objects.json#0
-encode/arrays-objects.json#1
-encode/arrays-objects.json#2
-encode/arrays-objects.json#3
-encode/arrays-objects.json#4
-encode/arrays-objects.json#5
-encode/arrays-objects.json#6
-encode/arrays-objects.json#7
-encode/arrays-objects.json#8
-encode/arrays-objects.json#9
-encode/arrays-objects.json#10
-encode/arrays-objects.json#11
-encode/arrays-objects.json#12
-encode/arrays-objects.json#13
-encode/arrays-objects.json#14
-encode/arrays-objects.json#15
-encode/arrays-objects.json#16
-encode/arrays-objects.json#17
-
-# encode/arrays-primitive.json
-encode/arrays-primitive.json#0
-encode/arrays-primitive.json#1
-encode/arrays-primitive.json#2
-encode/arrays-primitive.json#3
-encode/arrays-primitive.json#4
-encode/arrays-primitive.json#5
-encode/arrays-primitive.json#6
-encode/arrays-primitive.json#7
-encode/arrays-primitive.json#8
-encode/arrays-primitive.json#9
-encode/arrays-primitive.json#10
-encode/arrays-primitive.json#11
-encode/arrays-primitive.json#12
-
-# encode/arrays-tabular.json
-encode/arrays-tabular.json#0
-encode/arrays-tabular.json#1
-encode/arrays-tabular.json#2
-encode/arrays-tabular.json#3
-encode/arrays-tabular.json#4
-encode/arrays-tabular.json#5
-encode/arrays-tabular.json#6
-encode/arrays-tabular.json#7
-encode/arrays-tabular.json#8
-encode/arrays-tabular.json#9
-encode/arrays-tabular.json#10
-encode/arrays-tabular.json#11
-encode/arrays-tabular.json#12
-encode/arrays-tabular.json#13
-encode/arrays-tabular.json#14
-encode/arrays-tabular.json#15
-
-# encode/delimiters.json
-encode/delimiters.json#0
-encode/delimiters.json#1
-encode/delimiters.json#2
-encode/delimiters.json#3
-encode/delimiters.json#4
-encode/delimiters.json#5
-encode/delimiters.json#6
-encode/delimiters.json#7
-encode/delimiters.json#9
-encode/delimiters.json#11
-encode/delimiters.json#12
-encode/delimiters.json#13
-encode/delimiters.json#14
-encode/delimiters.json#15
-encode/delimiters.json#16
-encode/delimiters.json#19
-encode/delimiters.json#20
-encode/delimiters.json#21
-
-# encode/objects-keyed.json
-encode/objects-keyed.json#0
-encode/objects-keyed.json#1
-encode/objects-keyed.json#2
-encode/objects-keyed.json#3
-encode/objects-keyed.json#4
-encode/objects-keyed.json#5
-encode/objects-keyed.json#6
-encode/objects-keyed.json#10
-encode/objects-keyed.json#11
-encode/objects-keyed.json#12
-
-# encode/objects.json
-encode/objects.json#12
-encode/objects.json#13
-encode/objects.json#14
-encode/objects.json#15
-encode/objects.json#16
-encode/objects.json#17
-encode/objects.json#18
-encode/objects.json#19
-encode/objects.json#20
-encode/objects.json#21
-encode/objects.json#22
-encode/objects.json#23
-encode/objects.json#24
-encode/objects.json#25
-encode/objects.json#26
-encode/objects.json#27
-encode/objects.json#29
-encode/objects.json#32
-encode/objects.json#33
-
-# encode/primitives.json
-encode/primitives.json#12
-encode/primitives.json#13
-encode/primitives.json#16
-encode/primitives.json#17
-encode/primitives.json#19
-encode/primitives.json#20
-encode/primitives.json#21
-encode/primitives.json#22
-encode/primitives.json#32
-encode/primitives.json#42
-encode/primitives.json#43
-
-# encode/whitespace.json
-encode/whitespace.json#1
-
 # decode/arrays-nested.json
 decode/arrays-nested.json#0
 decode/arrays-nested.json#1
@@ -401,21 +265,13 @@ decode/whitespace.json#13
 decode/whitespace.json#14
 
 # local
-local/f32-nan-field
+# The float round-trip cases encode correctly (exponent form per §2) but
+# decode through the 0.2 decoder, which misreads exponent tokens. They pass
+# once the decoder rewrite lands. The last three were added by the encoder
+# rewrite: 0.2 wrote 1e-7 as `0.0000001`, which the old decoder could read.
 local/float-1.5e300-round-trip
 local/float-1e21-round-trip
 local/float-f64-max-round-trip
-local/i128-max-root
-local/i128-min-root
-local/i128-small-field
-local/inf-field
-local/inf-root
-local/nan-field
-local/nan-root
-local/neg-inf-field
-local/neg-inf-root
-local/neg-zero-field
-local/neg-zero-root
-local/u128-max-field
-local/u128-max-root
-local/u64-max-field
+local/float-1e-7-round-trip
+local/float-neg-2.5e-9-round-trip
+local/float-min-positive-round-trip
