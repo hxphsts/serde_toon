@@ -1,37 +1,49 @@
 //! # serde_toon
 //!
-//! A Serde-compatible serialization library for the TOON (Token-Oriented Object Notation) format.
+//! A [Serde](https://serde.rs) encoder and decoder for TOON (Token-Oriented
+//! Object Notation), targeting the
+//! [TOON specification v4.1](https://github.com/toon-format/spec)
+//! ([`SPEC_VERSION`]).
 //!
 //! ## What is TOON?
 //!
-//! TOON is a compact, human-readable data format specifically designed for efficient communication
-//! with Large Language Models (LLMs). It achieves 30-60% fewer tokens than equivalent JSON while
-//! maintaining readability and structure.
+//! TOON is a compact, line-oriented encoding of the JSON data model designed
+//! for passing structured data to Large Language Models. Objects use
+//! indentation instead of braces, strings are quoted only when necessary, and
+//! uniform arrays of objects become tables whose field names appear once.
 //!
-//! ## Key Features
+//! ## Key features
 //!
-//! - **Token-Efficient**: Minimalist syntax reduces token count by eliminating unnecessary braces,
-//!   brackets, and quotes
-//! - **Tabular Arrays**: Homogeneous object arrays serialize as compact tables with headers
-//! - **Serde Compatible**: Works seamlessly with existing Rust types via `#[derive(Serialize, Deserialize)]`
-//! - **Type Safe**: Statically typed with comprehensive error reporting
-//! - **No Unsafe Code**: Written entirely in safe Rust with zero unsafe blocks
+//! - **Spec conformant**: passes all 538 official conformance fixtures
+//!   (179 encode, 359 decode) of TOON spec v4.1.1.
+//! - **Serde compatible**: works with any `#[derive(Serialize, Deserialize)]`
+//!   type; see the [`ser`] module for the data model mapping.
+//! - **Tabular output**: uniform arrays of objects become tables, including
+//!   nested field groups (`{id,customer{name,country}}`) and keyed tables.
+//! - **Direct decoding**: the [`Deserializer`] walks the input without
+//!   building an intermediate tree, and borrows `&str` fields from the input
+//!   when they contain no escapes.
+//! - **Strict or lenient**: [`DecodeOptions`] selects spec strict mode,
+//!   non-strict mode, or (the default) non-strict mode that also reads what
+//!   serde_toon 0.2 wrote.
+//! - **Positioned errors**: decoding errors carry line and column.
+//! - **No unsafe code**: the crate is `#![forbid(unsafe_code)]`.
 //!
-//! ## Quick Start
+//! ## Quick start
 //!
 //! Add this to your `Cargo.toml`:
 //!
 //! ```toml
 //! [dependencies]
 //! serde = { version = "1.0", features = ["derive"] }
-//! serde_toon = "0.2"
+//! serde_toon = "0.3"
 //! ```
 //!
-//! ### Basic Serialization and Deserialization
+//! ### Serializing and deserializing
 //!
 //! ```rust
 //! use serde::{Deserialize, Serialize};
-//! use serde_toon::{to_string, from_str};
+//! use serde_toon::{from_str, to_string};
 //!
 //! #[derive(Serialize, Deserialize, PartialEq, Debug)]
 //! struct User {
@@ -40,30 +52,25 @@
 //!     active: bool,
 //! }
 //!
-//! let user = User {
-//!     id: 123,
-//!     name: "Alice".to_string(),
-//!     active: true,
-//! };
+//! let user = User { id: 123, name: "Alice".to_string(), active: true };
 //!
-//! // Serialize to TOON format
-//! let toon_string = to_string(&user).unwrap();
-//! assert_eq!(toon_string, "id: 123\nname: Alice\nactive: true");
+//! let toon = to_string(&user)?;
+//! assert_eq!(toon, "id: 123\nname: Alice\nactive: true");
 //!
-//! // Deserialize back
-//! let user_back: User = from_str(&toon_string).unwrap();
-//! assert_eq!(user, user_back);
+//! let back: User = from_str(&toon)?;
+//! assert_eq!(back, user);
+//! # Ok::<(), serde_toon::Error>(())
 //! ```
 //!
-//! ### Working with Arrays (Tabular Format)
+//! ### Arrays of objects (tabular form)
 //!
-//! Arrays of homogeneous objects automatically serialize as space-efficient tables:
+//! Fields are written in declaration order:
 //!
 //! ```rust
-//! use serde::{Deserialize, Serialize};
+//! use serde::Serialize;
 //! use serde_toon::to_string;
 //!
-//! #[derive(Serialize, Deserialize)]
+//! #[derive(Serialize)]
 //! struct Product {
 //!     id: u32,
 //!     name: String,
@@ -75,58 +82,91 @@
 //!     Product { id: 2, name: "Gadget".to_string(), price: 14.99 },
 //! ];
 //!
-//! let toon = to_string(&products).unwrap();
-//! assert_eq!(toon, "[2]{id,name,price}:\n  1,Widget,9.99\n  2,Gadget,14.99");
+//! assert_eq!(
+//!     to_string(&products)?,
+//!     "[2]{id,name,price}:\n  1,Widget,9.99\n  2,Gadget,14.99"
+//! );
+//! # Ok::<(), serde_toon::Error>(())
 //! ```
 //!
-//! ### Dynamic Values with toon! Macro
+//! ### Dynamic values with the `toon!` macro
 //!
 //! ```rust
-//! use serde_toon::{toon, Value};
+//! use serde_toon::{to_string, toon};
 //!
 //! let data = toon!({
 //!     "name": "Alice",
-//!     "age": 30,
 //!     "tags": ["rust", "serde", "llm"]
 //! });
 //!
-//! if let Value::Object(obj) = data {
-//!     assert_eq!(obj.get("name").and_then(|v| v.as_str()), Some("Alice"));
-//! }
+//! let name = data.as_object().and_then(|obj| obj.get("name"));
+//! assert_eq!(name.and_then(|v| v.as_str()), Some("Alice"));
+//! assert_eq!(to_string(&data)?, "name: Alice\ntags[3]: rust,serde,llm");
+//! # Ok::<(), serde_toon::Error>(())
 //! ```
 //!
-//! ## Performance Characteristics
+//! ## Decoding modes
 //!
-//! - **Serialization**: O(n) where n is the number of fields/elements
-//! - **Deserialization**: O(n) with single-pass parsing
-//! - **Memory**: Pre-allocated buffers minimize reallocations
-//! - **Token Count**: 30-60% reduction vs JSON for typical structured data
+//! [`from_str`], [`from_slice`] and [`from_reader`] use the default
+//! [`DecodeOptions::compatible`]. The `*_with_options` functions take a
+//! [`DecodeOptions`]:
 //!
-//! ## Safety Guarantees
+//! - [`DecodeOptions::strict`] enforces every check of spec §14: declared
+//!   array lengths and row widths, indentation multiples, tabs in
+//!   indentation, blank lines inside arrays, and duplicate keys. Use it to
+//!   validate untrusted or LLM-generated input.
+//! - [`DecodeOptions::lenient`] is the spec's non-strict mode.
+//! - [`DecodeOptions::compatible`] is lenient and also accepts the syntax
+//!   serde_toon 0.2 wrote (`[#N]` length markers, `key: [N]: …` headers,
+//!   `NaN`/`inf` tokens).
 //!
-//! - No `unsafe` code blocks
-//! - All array indexing is bounds-checked
-//! - Proper error propagation with `Result` types
-//! - No panics in public API (except for logic errors that indicate bugs)
+//! ```rust
+//! use serde_toon::{from_str, from_str_with_options, DecodeOptions};
 //!
-//! ## Format Specification
+//! // The header declares three elements but only two follow.
+//! let input = "[3]: 1,2";
+//! assert_eq!(from_str::<Vec<u32>>(input)?, [1, 2]);
 //!
-//! For the complete TOON format specification, see the [`spec`] module documentation.
+//! let err = from_str_with_options::<Vec<u32>>(input, DecodeOptions::strict());
+//! assert!(err.is_err());
+//! # Ok::<(), serde_toon::Error>(())
+//! ```
 //!
-//! External reference: <https://github.com/johannschopplich/toon>
+//! ## Robustness
+//!
+//! - Decoding arbitrary input returns an error rather than panicking
+//!   (property-tested), and nesting deeper than 128 levels is an error
+//!   instead of a stack overflow.
+//! - Integer targets use checked conversion: out-of-range values are an
+//!   error, never truncated.
+//! - Serialization errors only for unsupported map key types, a failing
+//!   `Serialize` impl, or [`ToonOptions::indent`] of 0.
+//!
+//! ## Format specification
+//!
+//! The [`spec`] module summarizes the format and how this crate encodes and
+//! decodes it. The normative specification is
+//! <https://github.com/toon-format/spec>.
 //!
 //! ## Examples
 //!
-//! See the `examples/` directory for focused, production-ready examples:
+//! The `examples/` directory contains runnable programs
+//! (`cargo run --example <name>`):
 //!
-//! - **`simple.rs`** - Your first TOON experience (basic serialization)
-//! - **`macro.rs`** - Building values with the toon! macro
-//! - **`tabular_arrays.rs`** - TOON's tabular feature for repeated structures
-//! - **`dynamic_values.rs`** - Working with Value dynamically
-//! - **`custom_options.rs`** - Customizing delimiters and formatting
-//! - **`token_efficiency.rs`** - TOON vs JSON comparison
+//! - **`simple`**: basic serialization and deserialization
+//! - **`macro`**: building values with the `toon!` macro
+//! - **`tabular_arrays`**: tabular output for repeated structures
+//! - **`dynamic_values`**: working with [`Value`]
+//! - **`custom_options`**: delimiters and indentation
+//! - **`token_efficiency`**: TOON vs JSON size comparison
+//! - **`strict_decoding`**: validating input with [`DecodeOptions::strict`]
 //!
-//! Run any example with: `cargo run --example <name>`
+//! ## Release notes
+//!
+//! See [`CHANGELOG.md`](https://github.com/hxphsts/serde_toon/blob/main/CHANGELOG.md),
+//! including notes on migrating from 0.2.
+
+#![forbid(unsafe_code)]
 
 pub mod de;
 pub mod error;

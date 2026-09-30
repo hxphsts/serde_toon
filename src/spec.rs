@@ -47,7 +47,8 @@
 //! spaces or tabs; equals `true`, `false`, or `null`; looks numeric (`42`,
 //! `-3.14`, `1e-6`, `05`, `+1`); contains `:`, `"`, `\`, `[`, `]`, `{`, `}`,
 //! a control character, or the relevant delimiter; or starts with `-` or
-//! `#`. Quoted strings escape only `\\`, `\"`, `\n`, `\r`, `\t`, and other
+//! `#`. Beyond §7.2, a string starting with U+FEFF is also quoted, since a
+//! decoder would strip it as a byte-order mark. Quoted strings escape only `\\`, `\"`, `\n`, `\r`, `\t`, and other
 //! control characters as `\u00XX` (§7.1).
 //!
 //! ```text
@@ -139,6 +140,61 @@
 //! Indentation uses spaces only (2 per level by default, configurable with
 //! [`ToonOptions::with_indent`](crate::ToonOptions::with_indent)); lines end
 //! with LF; there are no trailing spaces and no trailing newline.
+//!
+//! # Decoding
+//!
+//! The decoder reads everything above, including keyed tabular objects,
+//! nested field groups, and headers that declare a tab or pipe delimiter:
+//!
+//! ```rust
+//! use serde::Deserialize;
+//! use std::collections::BTreeMap;
+//!
+//! #[derive(Deserialize, Debug, PartialEq)]
+//! struct Person { age: u32, city: String }
+//!
+//! let toon = "users[2:]{age,city}:\n  alice: 30,Berlin\n  bob: 25,Oslo";
+//! let doc: BTreeMap<String, BTreeMap<String, Person>> = serde_toon::from_str(toon)?;
+//! assert_eq!(doc["users"]["bob"], Person { age: 25, city: "Oslo".into() });
+//! # Ok::<(), serde_toon::Error>(())
+//! ```
+//!
+//! Input may also contain what an encoder never writes (§5.1, §12):
+//!
+//! - **Comments**: a line whose first non-space character is `#` is ignored,
+//!   at any indentation. `#` after a value (`a: 1 # x`) is part of the value,
+//!   and a `#` line indented with tabs is not a comment.
+//! - A leading byte-order mark (U+FEFF), CRLF line endings, trailing spaces,
+//!   and blank lines between fields.
+//!
+//! Trailing content after a complete root array, keyed root object or root
+//! primitive is an error in every mode.
+//!
+//! ## Strictness (§14)
+//!
+//! [`DecodeOptions`](crate::DecodeOptions) selects one of three modes:
+//!
+//! - **Strict** ([`DecodeOptions::strict`](crate::DecodeOptions::strict)):
+//!   every §14 violation is an error with its line and column: an array
+//!   length or tabular row count that differs from the header, a row with
+//!   the wrong number of cells, indentation that is not a multiple of the
+//!   indent size, tabs used for indentation, a blank line inside an array or
+//!   keyed object, and duplicate sibling keys.
+//! - **Lenient** ([`DecodeOptions::lenient`](crate::DecodeOptions::lenient)):
+//!   the spec's non-strict mode. Declared lengths are not enforced, missing
+//!   cells leave fields absent and extra cells are ignored, indentation is rounded down to a level (a
+//!   leading tab counts as one level), and duplicate keys are passed to the
+//!   visitor in document order (maps keep the last value).
+//! - **Compatible** ([`DecodeOptions::compatible`](crate::DecodeOptions::compatible),
+//!   the default and what [`from_str`](crate::from_str) uses): lenient, plus
+//!   the syntax serde_toon 0.2 wrote: `[#N]` length markers, tab headers
+//!   written with spaces (`[2    ]`), headers after a key's colon
+//!   (`key: [2]: a,b`), `NaN`/`Infinity`/`inf` float tokens and the 0.2 root
+//!   enum layout.
+//!
+//! The [`de`](crate::de) module documents the remaining
+//! implementation-defined choices (number conversion, typed hints, nesting
+//! limits).
 //!
 //! # Rust types
 //!
