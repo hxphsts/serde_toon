@@ -290,6 +290,21 @@ impl Default for DecodeOptions {
 impl DecodeOptions {
     /// Spec-conformant strict decoding (TOON v4.1 §14), as recommended by the
     /// specification for validating untrusted or LLM-generated input.
+    ///
+    /// Declared array lengths, tabular row widths, indentation, tabs in
+    /// indentation, blank lines inside arrays and duplicate sibling keys are
+    /// all checked; a violation is an error carrying its line and column.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use serde_toon::{from_str_with_options, DecodeOptions, Error};
+    /// use std::collections::BTreeMap;
+    ///
+    /// let result = from_str_with_options::<BTreeMap<String, u32>>("a: 1\na: 2", DecodeOptions::strict());
+    /// // The duplicate key is reported at line 2.
+    /// assert!(matches!(result, Err(Error::Syntax { line: 2, .. })));
+    /// ```
     #[must_use]
     pub const fn strict() -> Self {
         Self::with_mode(DecodeMode::Strict)
@@ -297,6 +312,23 @@ impl DecodeOptions {
 
     /// Spec-conformant non-strict decoding: declared lengths, indentation
     /// multiples and duplicate keys are not enforced.
+    ///
+    /// Syntax that only serde_toon 0.2 wrote, such as `[#N]` length markers,
+    /// is rejected; use [`DecodeOptions::compatible`] to accept it.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use serde_toon::{from_str_with_options, DecodeOptions};
+    ///
+    /// // The header declares 3 elements; lenient mode takes the 2 present.
+    /// let xs: Vec<u32> = from_str_with_options("[3]: 1,2", DecodeOptions::lenient())?;
+    /// assert_eq!(xs, [1, 2]);
+    ///
+    /// // serde_toon 0.2 length markers are not TOON v4.1.
+    /// assert!(from_str_with_options::<Vec<u32>>("[#2]: 1,2", DecodeOptions::lenient()).is_err());
+    /// # Ok::<(), serde_toon::Error>(())
+    /// ```
     #[must_use]
     pub const fn lenient() -> Self {
         Self::with_mode(DecodeMode::Lenient)
@@ -304,6 +336,25 @@ impl DecodeOptions {
 
     /// Non-strict decoding that additionally accepts the syntax produced by
     /// serde_toon 0.2. This is the default and what [`from_str`](crate::from_str) uses.
+    ///
+    /// The extra syntax is: `[#N]` length markers, tab headers written with
+    /// spaces (`[2    ]`), headers after a key's colon (`key: [2]: a,b`),
+    /// `NaN`/`Infinity`/`inf` float tokens and the 0.2 root enum layout.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use serde_toon::{from_str_with_options, DecodeOptions};
+    /// use std::collections::BTreeMap;
+    ///
+    /// // Written by serde_toon 0.2 with `with_length_marker('#')`.
+    /// let old = "tags: [#2]: a,b";
+    /// let doc: BTreeMap<String, Vec<String>> =
+    ///     from_str_with_options(old, DecodeOptions::compatible())?;
+    /// assert_eq!(doc["tags"], ["a", "b"]);
+    /// assert_eq!(DecodeOptions::compatible(), DecodeOptions::default());
+    /// # Ok::<(), serde_toon::Error>(())
+    /// ```
     #[must_use]
     pub const fn compatible() -> Self {
         Self::with_mode(DecodeMode::Compatible)
@@ -334,18 +385,44 @@ impl DecodeOptions {
     }
 
     /// Whether spec strict-mode validation (§14) is enforced.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use serde_toon::DecodeOptions;
+    ///
+    /// assert!(DecodeOptions::strict().is_strict());
+    /// assert!(!DecodeOptions::default().is_strict());
+    /// ```
     #[must_use]
     pub const fn is_strict(&self) -> bool {
         matches!(self.mode, DecodeMode::Strict)
     }
 
     /// Whether serde_toon 0.2 syntax is accepted.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use serde_toon::DecodeOptions;
+    ///
+    /// assert!(DecodeOptions::default().is_compatible());
+    /// assert!(!DecodeOptions::lenient().is_compatible());
+    /// ```
     #[must_use]
     pub const fn is_compatible(&self) -> bool {
         matches!(self.mode, DecodeMode::Compatible)
     }
 
     /// The number of spaces per indentation level.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use serde_toon::DecodeOptions;
+    ///
+    /// assert_eq!(DecodeOptions::default().indent_size(), 2);
+    /// ```
     #[must_use]
     pub const fn indent_size(&self) -> usize {
         self.indent_size

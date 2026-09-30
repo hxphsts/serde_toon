@@ -48,8 +48,9 @@
 //! let value = Value::from(42);
 //!
 //! // Safe extraction with TryFrom
-//! let num: i64 = i64::try_from(value).unwrap();
+//! let num: i64 = i64::try_from(value)?;
 //! assert_eq!(num, 42);
+//! # Ok::<(), serde_toon::Error>(())
 //! ```
 //!
 //! ### Converting from Rust Types
@@ -62,11 +63,12 @@
 //! struct Point { x: i32, y: i32 }
 //!
 //! let point = Point { x: 10, y: 20 };
-//! let value: Value = to_value(&point).unwrap();
+//! let value: Value = to_value(&point)?;
 //!
 //! if let Value::Object(obj) = value {
 //!     assert_eq!(obj.len(), 2);
 //! }
+//! # Ok::<(), serde_toon::Error>(())
 //! ```
 
 use crate::ToonMap;
@@ -83,6 +85,22 @@ use std::fmt;
 /// - The structure isn't known at compile time
 /// - You need to manipulate TOON data generically
 /// - Building TOON structures programmatically
+///
+/// # Decoding numbers
+///
+/// When TOON text is decoded into a `Value`, integers that fit in `i64`
+/// become [`Number::Integer`], integers up to `u64::MAX` become
+/// [`Value::BigInt`], and larger integers, fractions and exponent numbers
+/// become [`Number::Float`]. Serializing a [`Value::BigInt`] writes the
+/// string `<digits>n`, not a number.
+///
+/// ```rust
+/// use serde_toon::{from_str, Number, Value};
+///
+/// assert_eq!(from_str::<Value>("42")?, Value::Number(Number::Integer(42)));
+/// assert!(from_str::<Value>("18446744073709551615")?.is_bigint());
+/// # Ok::<(), serde_toon::Error>(())
+/// ```
 ///
 /// # Examples
 ///

@@ -320,8 +320,9 @@ where
 /// struct Point { x: i32, y: i32 }
 ///
 /// let point = Point { x: 1, y: 2 };
-/// let value: Value = to_value(&point).unwrap();
+/// let value: Value = to_value(&point)?;
 /// assert!(value.is_object());
+/// # Ok::<(), serde_toon::Error>(())
 /// ```
 ///
 /// # Errors
@@ -401,6 +402,11 @@ where
 
 /// Deserialize an instance of type `T` from a string of TOON text.
 ///
+/// Uses the default [`DecodeOptions::compatible`] mode: the spec's non-strict
+/// decoding, which also accepts documents written by serde_toon 0.2. To
+/// validate input against spec strict mode, use [`from_str_with_options`]
+/// with [`DecodeOptions::strict`].
+///
 /// # Examples
 ///
 /// ```rust
@@ -411,8 +417,9 @@ where
 /// struct Point { x: i32, y: i32 }
 ///
 /// let toon = "x: 1\ny: 2";
-/// let point: Point = from_str(toon).unwrap();
+/// let point: Point = from_str(toon)?;
 /// assert_eq!(point, Point { x: 1, y: 2 });
+/// # Ok::<(), serde_toon::Error>(())
 /// ```
 ///
 /// # Errors
@@ -477,8 +484,9 @@ where
 ///
 /// let toon_bytes = b"x: 1\ny: 2";
 /// let cursor = Cursor::new(toon_bytes);
-/// let point: Point = from_reader(cursor).unwrap();
+/// let point: Point = from_reader(cursor)?;
 /// assert_eq!(point, Point { x: 1, y: 2 });
+/// # Ok::<(), serde_toon::Error>(())
 /// ```
 ///
 /// # Errors
@@ -542,8 +550,9 @@ where
 /// struct Point { x: i32, y: i32 }
 ///
 /// let toon_bytes = b"x: 1\ny: 2";
-/// let point: Point = from_slice(toon_bytes).unwrap();
+/// let point: Point = from_slice(toon_bytes)?;
 /// assert_eq!(point, Point { x: 1, y: 2 });
+/// # Ok::<(), serde_toon::Error>(())
 /// ```
 ///
 /// # Errors
