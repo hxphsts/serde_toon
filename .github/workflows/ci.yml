@@ -2,8 +2,11 @@ name: CI
 
 on:
   push:
-    branches: [ main, master ]
+    branches: [ main ]
   pull_request:
+
+permissions:
+  contents: read
 
 env:
   CARGO_TERM_COLOR: always
@@ -77,3 +80,11 @@ jobs:
       - run: cargo update -p serde --precise 1.0.228
       - uses: dtolnay/rust-toolchain@1.70
       - run: cargo check --lib
+
+  # The crate must build from its own tarball, as crates.io receives it.
+  package:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - run: cargo package
