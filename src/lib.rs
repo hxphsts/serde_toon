@@ -1,37 +1,49 @@
 //! # serde_toon
 //!
-//! A Serde-compatible serialization library for the TOON (Token-Oriented Object Notation) format.
+//! A [Serde](https://serde.rs) encoder and decoder for TOON (Token-Oriented
+//! Object Notation), targeting the
+//! [TOON specification v4.1](https://github.com/toon-format/spec)
+//! ([`SPEC_VERSION`]).
 //!
 //! ## What is TOON?
 //!
-//! TOON is a compact, human-readable data format specifically designed for efficient communication
-//! with Large Language Models (LLMs). It achieves 30-60% fewer tokens than equivalent JSON while
-//! maintaining readability and structure.
+//! TOON is a compact, line-oriented encoding of the JSON data model designed
+//! for passing structured data to Large Language Models. Objects use
+//! indentation instead of braces, strings are quoted only when necessary, and
+//! uniform arrays of objects become tables whose field names appear once.
 //!
-//! ## Key Features
+//! ## Key features
 //!
-//! - **Token-Efficient**: Minimalist syntax reduces token count by eliminating unnecessary braces,
-//!   brackets, and quotes
-//! - **Tabular Arrays**: Homogeneous object arrays serialize as compact tables with headers
-//! - **Serde Compatible**: Works seamlessly with existing Rust types via `#[derive(Serialize, Deserialize)]`
-//! - **Type Safe**: Statically typed with comprehensive error reporting
-//! - **No Unsafe Code**: Written entirely in safe Rust with zero unsafe blocks
+//! - **Spec conformant**: passes all 538 official conformance fixtures
+//!   (179 encode, 359 decode) of TOON spec v4.1.1.
+//! - **Serde compatible**: works with any `#[derive(Serialize, Deserialize)]`
+//!   type; see the [`ser`] module for the data model mapping.
+//! - **Tabular output**: uniform arrays of objects become tables, including
+//!   nested field groups (`{id,customer{name,country}}`) and keyed tables.
+//! - **Direct decoding**: the [`Deserializer`] walks the input without
+//!   building an intermediate tree, and borrows `&str` fields from the input
+//!   when they contain no escapes.
+//! - **Strict or lenient**: [`DecodeOptions`] selects spec strict mode,
+//!   non-strict mode, or (the default) non-strict mode that also reads what
+//!   serde_toon 0.2 wrote.
+//! - **Positioned errors**: decoding errors carry line and column.
+//! - **No unsafe code**: the crate is `#![forbid(unsafe_code)]`.
 //!
-//! ## Quick Start
+//! ## Quick start
 //!
 //! Add this to your `Cargo.toml`:
 //!
 //! ```toml
 //! [dependencies]
 //! serde = { version = "1.0", features = ["derive"] }
-//! serde_toon = "0.2"
+//! serde_toon = "0.3"
 //! ```
 //!
-//! ### Basic Serialization and Deserialization
+//! ### Serializing and deserializing
 //!
 //! ```rust
 //! use serde::{Deserialize, Serialize};
-//! use serde_toon::{to_string, from_str};
+//! use serde_toon::{from_str, to_string};
 //!
 //! #[derive(Serialize, Deserialize, PartialEq, Debug)]
 //! struct User {
@@ -40,30 +52,25 @@
 //!     active: bool,
 //! }
 //!
-//! let user = User {
-//!     id: 123,
-//!     name: "Alice".to_string(),
-//!     active: true,
-//! };
+//! let user = User { id: 123, name: "Alice".to_string(), active: true };
 //!
-//! // Serialize to TOON format
-//! let toon_string = to_string(&user).unwrap();
-//! // Output: "id: 123\nname: Alice\nactive: true"
+//! let toon = to_string(&user)?;
+//! assert_eq!(toon, "id: 123\nname: Alice\nactive: true");
 //!
-//! // Deserialize back
-//! let user_back: User = from_str(&toon_string).unwrap();
-//! assert_eq!(user, user_back);
+//! let back: User = from_str(&toon)?;
+//! assert_eq!(back, user);
+//! # Ok::<(), serde_toon::Error>(())
 //! ```
 //!
-//! ### Working with Arrays (Tabular Format)
+//! ### Arrays of objects (tabular form)
 //!
-//! Arrays of homogeneous objects automatically serialize as space-efficient tables:
+//! Fields are written in declaration order:
 //!
 //! ```rust
-//! use serde::{Deserialize, Serialize};
+//! use serde::Serialize;
 //! use serde_toon::to_string;
 //!
-//! #[derive(Serialize, Deserialize)]
+//! #[derive(Serialize)]
 //! struct Product {
 //!     id: u32,
 //!     name: String,
@@ -75,61 +82,95 @@
 //!     Product { id: 2, name: "Gadget".to_string(), price: 14.99 },
 //! ];
 //!
-//! let toon = to_string(&products).unwrap();
-//! // Output: "[2]{id,name,price}:\n  1,Widget,9.99\n  2,Gadget,14.99"
+//! assert_eq!(
+//!     to_string(&products)?,
+//!     "[2]{id,name,price}:\n  1,Widget,9.99\n  2,Gadget,14.99"
+//! );
+//! # Ok::<(), serde_toon::Error>(())
 //! ```
 //!
-//! ### Dynamic Values with toon! Macro
+//! ### Dynamic values with the `toon!` macro
 //!
 //! ```rust
-//! use serde_toon::{toon, Value};
+//! use serde_toon::{to_string, toon};
 //!
 //! let data = toon!({
 //!     "name": "Alice",
-//!     "age": 30,
 //!     "tags": ["rust", "serde", "llm"]
 //! });
 //!
-//! if let Value::Object(obj) = data {
-//!     assert_eq!(obj.get("name").and_then(|v| v.as_str()), Some("Alice"));
-//! }
+//! let name = data.as_object().and_then(|obj| obj.get("name"));
+//! assert_eq!(name.and_then(|v| v.as_str()), Some("Alice"));
+//! assert_eq!(to_string(&data)?, "name: Alice\ntags[3]: rust,serde,llm");
+//! # Ok::<(), serde_toon::Error>(())
 //! ```
 //!
-//! ## Performance Characteristics
+//! ## Decoding modes
 //!
-//! - **Serialization**: O(n) where n is the number of fields/elements
-//! - **Deserialization**: O(n) with single-pass parsing
-//! - **Memory**: Pre-allocated buffers minimize reallocations
-//! - **Token Count**: 30-60% reduction vs JSON for typical structured data
+//! [`from_str`], [`from_slice`] and [`from_reader`] use the default
+//! [`DecodeOptions::compatible`]. The `*_with_options` functions take a
+//! [`DecodeOptions`]:
 //!
-//! ## Safety Guarantees
+//! - [`DecodeOptions::strict`] enforces every check of spec §14: declared
+//!   array lengths and row widths, indentation multiples, tabs in
+//!   indentation, blank lines inside arrays, and duplicate keys. Use it to
+//!   validate untrusted or LLM-generated input.
+//! - [`DecodeOptions::lenient`] is the spec's non-strict mode.
+//! - [`DecodeOptions::compatible`] is lenient and also accepts the syntax
+//!   serde_toon 0.2 wrote (`[#N]` length markers, `key: [N]: ...` headers,
+//!   `NaN`/`inf` tokens).
 //!
-//! - No `unsafe` code blocks
-//! - All array indexing is bounds-checked
-//! - Proper error propagation with `Result` types
-//! - No panics in public API (except for logic errors that indicate bugs)
+//! ```rust
+//! use serde_toon::{from_str, from_str_with_options, DecodeOptions};
 //!
-//! ## Format Specification
+//! // The header declares three elements but only two follow.
+//! let input = "[3]: 1,2";
+//! assert_eq!(from_str::<Vec<u32>>(input)?, [1, 2]);
 //!
-//! For the complete TOON format specification, see the [`spec`] module documentation.
+//! let err = from_str_with_options::<Vec<u32>>(input, DecodeOptions::strict());
+//! assert!(err.is_err());
+//! # Ok::<(), serde_toon::Error>(())
+//! ```
 //!
-//! External reference: <https://github.com/johannschopplich/toon>
+//! ## Robustness
+//!
+//! - Decoding arbitrary input returns an error rather than panicking
+//!   (property-tested), and nesting deeper than 128 levels is an error
+//!   instead of a stack overflow.
+//! - Integer targets use checked conversion: out-of-range values are an
+//!   error, never truncated.
+//! - Serialization errors only for unsupported map key types, a failing
+//!   `Serialize` impl, or [`ToonOptions::indent`] of 0.
+//!
+//! ## Format specification
+//!
+//! The [`spec`] module summarizes the format and how this crate encodes and
+//! decodes it. The normative specification is
+//! <https://github.com/toon-format/spec>.
 //!
 //! ## Examples
 //!
-//! See the `examples/` directory for focused, production-ready examples:
+//! The `examples/` directory contains runnable programs
+//! (`cargo run --example <name>`):
 //!
-//! - **`simple.rs`** - Your first TOON experience (basic serialization)
-//! - **`macro.rs`** - Building values with the toon! macro
-//! - **`tabular_arrays.rs`** - TOON's tabular feature for repeated structures
-//! - **`dynamic_values.rs`** - Working with Value dynamically
-//! - **`custom_options.rs`** - Customizing delimiters and formatting
-//! - **`token_efficiency.rs`** - TOON vs JSON comparison
+//! - **`simple`**: basic serialization and deserialization
+//! - **`macro`**: building values with the `toon!` macro
+//! - **`tabular_arrays`**: tabular output for repeated structures
+//! - **`dynamic_values`**: working with [`Value`]
+//! - **`custom_options`**: delimiters and indentation
+//! - **`token_efficiency`**: TOON vs JSON size comparison
+//! - **`strict_decoding`**: validating input with [`DecodeOptions::strict`]
 //!
-//! Run any example with: `cargo run --example <name>`
+//! ## Release notes
+//!
+//! See [`CHANGELOG.md`](https://github.com/hxphsts/serde_toon/blob/main/CHANGELOG.md),
+//! including notes on migrating from 0.2.
+
+#![forbid(unsafe_code)]
 
 pub mod de;
 pub mod error;
+mod lexical;
 pub mod macros;
 pub mod map;
 pub mod options;
@@ -140,14 +181,32 @@ pub mod value;
 pub use de::Deserializer;
 pub use error::{Error, Result};
 pub use map::ToonMap;
-pub use options::{Delimiter, ToonOptions};
+pub use options::{DecodeOptions, Delimiter, ToonOptions};
 pub use ser::{Serializer, ValueSerializer};
 pub use value::{Number, Value};
 
 use serde::{Deserialize, Serialize};
 use std::io;
 
-/// Serialize any `T: Serialize` to a TOON string.
+// Compile and run the README's Rust examples as doctests.
+#[cfg(doctest)]
+#[doc = include_str!("../README.md")]
+struct ReadmeDoctests;
+
+/// The version of the [TOON specification](https://github.com/toon-format/spec)
+/// this crate targets.
+///
+/// # Examples
+///
+/// ```rust
+/// assert_eq!(serde_toon::SPEC_VERSION, "4.1");
+/// ```
+pub const SPEC_VERSION: &str = "4.1";
+
+/// Serialize any `T: Serialize` to a TOON string, using the default options
+/// (2-space indentation, comma delimiter).
+///
+/// See the [`ser`] module for how Rust values map to TOON.
 ///
 /// # Examples
 ///
@@ -159,12 +218,14 @@ use std::io;
 /// struct Point { x: i32, y: i32 }
 ///
 /// let point = Point { x: 1, y: 2 };
-/// let toon = to_string(&point).unwrap();
+/// assert_eq!(to_string(&point)?, "x: 1\ny: 2");
+/// # Ok::<(), serde_toon::Error>(())
 /// ```
 ///
 /// # Errors
 ///
-/// Returns an error if the value cannot be serialized (e.g., unsupported types).
+/// Returns an error if the value's `Serialize` impl fails, or if a map key
+/// is not a string, char, integer, or boolean.
 #[must_use = "this returns the result of the operation, errors must be handled"]
 pub fn to_string<T>(value: &T) -> Result<String>
 where
@@ -173,26 +234,28 @@ where
     to_string_with_options(value, ToonOptions::default())
 }
 
-/// Serialize any `T: Serialize` to a pretty-printed TOON string.
+/// Serialize any `T: Serialize` to a TOON string using [`ToonOptions::pretty`].
 ///
-/// Pretty-printing adds newlines and indentation for readability.
+/// TOON output is always multi-line and indented, so this returns the same
+/// text as [`to_string`]; it is kept for compatibility.
 ///
 /// # Examples
 ///
 /// ```rust
-/// use serde_toon::to_string_pretty;
+/// use serde_toon::{to_string, to_string_pretty};
 /// use serde::Serialize;
 ///
 /// #[derive(Serialize)]
 /// struct Point { x: i32, y: i32 }
 ///
 /// let point = Point { x: 1, y: 2 };
-/// let toon = to_string_pretty(&point).unwrap();
+/// assert_eq!(to_string_pretty(&point)?, to_string(&point)?);
+/// # Ok::<(), serde_toon::Error>(())
 /// ```
 ///
 /// # Errors
 ///
-/// Returns an error if the value cannot be serialized.
+/// Returns an error in the same cases as [`to_string`].
 #[must_use = "this returns the result of the operation, errors must be handled"]
 pub fn to_string_pretty<T>(value: &T) -> Result<String>
 where
@@ -203,7 +266,8 @@ where
 
 /// Serialize any `T: Serialize` to a TOON string with custom options.
 ///
-/// Allows customization of delimiters, indentation, and length markers.
+/// The options set the indentation width and the document delimiter, which
+/// every array header declares.
 ///
 /// # Examples
 ///
@@ -214,16 +278,24 @@ where
 /// #[derive(Serialize)]
 /// struct Point { x: i32, y: i32 }
 ///
-/// let point = Point { x: 1, y: 2 };
+/// #[derive(Serialize)]
+/// struct Shape { points: Vec<Point> }
+///
+/// let shape = Shape { points: vec![Point { x: 1, y: 2 }, Point { x: 3, y: 4 }] };
 /// let options = ToonOptions::new()
-///     .with_delimiter(Delimiter::Tab)
-///     .with_length_marker('#');
-/// let toon = to_string_with_options(&point, options).unwrap();
+///     .with_delimiter(Delimiter::Pipe)
+///     .with_indent(4);
+/// assert_eq!(
+///     to_string_with_options(&shape, options)?,
+///     "points[2|]{x|y}:\n    1|2\n    3|4"
+/// );
+/// # Ok::<(), serde_toon::Error>(())
 /// ```
 ///
 /// # Errors
 ///
-/// Returns an error if the value cannot be serialized.
+/// Returns an error if `options.indent` is 0, or in the same cases as
+/// [`to_string`].
 #[must_use = "this returns the result of the operation, errors must be handled"]
 pub fn to_string_with_options<T>(value: &T, options: ToonOptions) -> Result<String>
 where
@@ -248,8 +320,9 @@ where
 /// struct Point { x: i32, y: i32 }
 ///
 /// let point = Point { x: 1, y: 2 };
-/// let value: Value = to_value(&point).unwrap();
+/// let value: Value = to_value(&point)?;
 /// assert!(value.is_object());
+/// # Ok::<(), serde_toon::Error>(())
 /// ```
 ///
 /// # Errors
@@ -270,19 +343,21 @@ where
 /// ```rust
 /// use serde_toon::to_writer;
 /// use serde::Serialize;
-/// use std::io::Cursor;
 ///
 /// #[derive(Serialize)]
 /// struct Point { x: i32, y: i32 }
 ///
 /// let point = Point { x: 1, y: 2 };
 /// let mut buffer = Vec::new();
-/// to_writer(&mut buffer, &point).unwrap();
+/// to_writer(&mut buffer, &point)?;
+/// assert_eq!(buffer, b"x: 1\ny: 2");
+/// # Ok::<(), serde_toon::Error>(())
 /// ```
 ///
 /// # Errors
 ///
-/// Returns an error if serialization fails or writing to the writer fails.
+/// Returns an error if serialization fails (see [`to_string`]) or writing to
+/// the writer fails.
 #[must_use = "this returns the result of the operation, errors must be handled"]
 pub fn to_writer<W, T>(writer: W, value: &T) -> Result<()>
 where
@@ -294,9 +369,24 @@ where
 
 /// Serialize any `T: Serialize` to a writer in TOON format with custom options.
 ///
+/// The document is built in memory and written with a single `write_all`.
+///
+/// # Examples
+///
+/// ```rust
+/// use serde_toon::{to_writer_with_options, Delimiter, ToonOptions};
+///
+/// let mut buffer = Vec::new();
+/// let options = ToonOptions::new().with_delimiter(Delimiter::Tab);
+/// to_writer_with_options(&mut buffer, &["a", "b"], options)?;
+/// assert_eq!(buffer, b"[2\t]: a\tb");
+/// # Ok::<(), serde_toon::Error>(())
+/// ```
+///
 /// # Errors
 ///
-/// Returns an error if serialization fails or writing to the writer fails.
+/// Returns an error if serialization fails (see [`to_string_with_options`])
+/// or writing to the writer fails.
 #[must_use = "this returns the result of the operation, errors must be handled"]
 pub fn to_writer_with_options<W, T>(mut writer: W, value: &T, options: ToonOptions) -> Result<()>
 where
@@ -312,6 +402,11 @@ where
 
 /// Deserialize an instance of type `T` from a string of TOON text.
 ///
+/// Uses the default [`DecodeOptions::compatible`] mode: the spec's non-strict
+/// decoding, which also accepts documents written by serde_toon 0.2. To
+/// validate input against spec strict mode, use [`from_str_with_options`]
+/// with [`DecodeOptions::strict`].
+///
 /// # Examples
 ///
 /// ```rust
@@ -322,8 +417,9 @@ where
 /// struct Point { x: i32, y: i32 }
 ///
 /// let toon = "x: 1\ny: 2";
-/// let point: Point = from_str(toon).unwrap();
+/// let point: Point = from_str(toon)?;
 /// assert_eq!(point, Point { x: 1, y: 2 });
+/// # Ok::<(), serde_toon::Error>(())
 /// ```
 ///
 /// # Errors
@@ -336,6 +432,41 @@ where
     T: Deserialize<'a>,
 {
     let mut deserializer = Deserializer::from_str(s);
+    T::deserialize(&mut deserializer)
+}
+
+/// Deserialize an instance of type `T` from a string of TOON text, using the
+/// given [`DecodeOptions`].
+///
+/// # Examples
+///
+/// ```rust
+/// use serde_toon::{from_str_with_options, DecodeOptions};
+/// use serde::Deserialize;
+///
+/// #[derive(Deserialize, PartialEq, Debug)]
+/// struct Point { x: i32, y: i32 }
+///
+/// let point: Point = from_str_with_options("x: 1\ny: 2", DecodeOptions::strict())?;
+/// assert_eq!(point, Point { x: 1, y: 2 });
+///
+/// // Strict mode rejects duplicate keys.
+/// let dup = from_str_with_options::<Point>("x: 1\nx: 2\ny: 3", DecodeOptions::strict());
+/// assert!(dup.is_err());
+/// # Ok::<(), serde_toon::Error>(())
+/// ```
+///
+/// # Errors
+///
+/// Returns an error if the input is not valid TOON under the chosen options,
+/// or cannot be deserialized to type `T`. Syntax errors carry line and column
+/// information.
+#[must_use = "this returns the result of the operation, errors must be handled"]
+pub fn from_str_with_options<'a, T>(s: &'a str, options: DecodeOptions) -> Result<T>
+where
+    T: Deserialize<'a>,
+{
+    let mut deserializer = Deserializer::from_str_with_options(s, options);
     T::deserialize(&mut deserializer)
 }
 
@@ -353,8 +484,9 @@ where
 ///
 /// let toon_bytes = b"x: 1\ny: 2";
 /// let cursor = Cursor::new(toon_bytes);
-/// let point: Point = from_reader(cursor).unwrap();
+/// let point: Point = from_reader(cursor)?;
 /// assert_eq!(point, Point { x: 1, y: 2 });
+/// # Ok::<(), serde_toon::Error>(())
 /// ```
 ///
 /// # Errors
@@ -374,6 +506,38 @@ where
     from_str(&string)
 }
 
+/// Deserialize an instance of type `T` from an I/O stream of TOON, using the
+/// given [`DecodeOptions`].
+///
+/// # Examples
+///
+/// ```rust
+/// use serde_toon::{from_reader_with_options, DecodeOptions};
+/// use std::collections::BTreeMap;
+///
+/// let map: BTreeMap<String, i32> =
+///     from_reader_with_options(&b"a: 1"[..], DecodeOptions::strict())?;
+/// assert_eq!(map["a"], 1);
+/// # Ok::<(), serde_toon::Error>(())
+/// ```
+///
+/// # Errors
+///
+/// Returns an error if reading fails, the input is not valid TOON under the
+/// chosen options, or it cannot be deserialized to type `T`.
+#[must_use = "this returns the result of the operation, errors must be handled"]
+pub fn from_reader_with_options<R, T>(mut reader: R, options: DecodeOptions) -> Result<T>
+where
+    R: io::Read,
+    T: for<'de> Deserialize<'de>,
+{
+    let mut string = String::new();
+    reader
+        .read_to_string(&mut string)
+        .map_err(|e| Error::io(&e.to_string()))?;
+    from_str_with_options(&string, options)
+}
+
 /// Deserialize an instance of type `T` from bytes of TOON text.
 ///
 /// # Examples
@@ -386,8 +550,9 @@ where
 /// struct Point { x: i32, y: i32 }
 ///
 /// let toon_bytes = b"x: 1\ny: 2";
-/// let point: Point = from_slice(toon_bytes).unwrap();
+/// let point: Point = from_slice(toon_bytes)?;
 /// assert_eq!(point, Point { x: 1, y: 2 });
+/// # Ok::<(), serde_toon::Error>(())
 /// ```
 ///
 /// # Errors
@@ -399,8 +564,35 @@ pub fn from_slice<'a, T>(v: &'a [u8]) -> Result<T>
 where
     T: Deserialize<'a>,
 {
-    let s = std::str::from_utf8(v).map_err(|e| Error::custom(e.to_string()))?;
+    let s = de::str_from_utf8(v)?;
     from_str(s)
+}
+
+/// Deserialize an instance of type `T` from bytes of TOON text, using the
+/// given [`DecodeOptions`].
+///
+/// # Examples
+///
+/// ```rust
+/// use serde_toon::{from_slice_with_options, DecodeOptions};
+/// use std::collections::BTreeMap;
+///
+/// let map: BTreeMap<String, bool> = from_slice_with_options(b"ok: true", DecodeOptions::strict())?;
+/// assert!(map["ok"]);
+/// # Ok::<(), serde_toon::Error>(())
+/// ```
+///
+/// # Errors
+///
+/// Returns an error if the bytes are not valid UTF-8, not valid TOON under the
+/// chosen options, or cannot be deserialized to type `T`.
+#[must_use = "this returns the result of the operation, errors must be handled"]
+pub fn from_slice_with_options<'a, T>(v: &'a [u8], options: DecodeOptions) -> Result<T>
+where
+    T: Deserialize<'a>,
+{
+    let s = de::str_from_utf8(v)?;
+    from_str_with_options(s, options)
 }
 
 #[cfg(test)]
@@ -481,6 +673,7 @@ mod tests {
     }
 
     #[test]
+    #[allow(deprecated)] // the length marker is accepted and ignored
     fn test_custom_options() {
         let user = User {
             id: 123,

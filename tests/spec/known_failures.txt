@@ -1,0 +1,12 @@
+# Spec conformance cases that are allowed to fail (see tests/spec_conformance.rs).
+#
+# One case id per line: `<category>/<file>#<index>` for fixtures (index is the
+# position in the file's `tests` array) or `local/<name>` for the local §3
+# cases. Lines starting with `#` are comments; text after the id is ignored.
+#
+# This list may only shrink. When a listed case starts passing, the
+# conformance test fails and asks for the line to be removed; ids that match
+# no case also fail the test.
+#
+# Initially populated with every case the serde_toon 0.2.0 encoder/decoder
+# failed; empty since the 0.3.0 rewrite, which passes every case.

@@ -1,0 +1,135 @@
+name: Release
+
+# Publishes the crate to crates.io and creates the GitHub release when a
+# version tag (`vX.Y.Z`) is pushed. See "Releasing" in CONTRIBUTING.md.
+on:
+  push:
+    tags: [ "v*" ]
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  # Cheap checks that decide whether this tag is a release at all. Every other
+  # job waits for them, so a stray tag stops here before anything else runs.
+  gate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      # A release is a tag on main.
+      - name: tagged commit is on main
+        run: |
+          git fetch --no-tags origin main
+          git merge-base --is-ancestor "$GITHUB_SHA" origin/main || { echo "$GITHUB_REF_NAME points at $GITHUB_SHA, which is not on main"; exit 1; }
+      - name: tag matches the crate version
+        run: |
+          version=$(cargo metadata --no-deps --format-version 1 | python3 -c "import json,sys; print(next(p['version'] for p in json.load(sys.stdin)['packages'] if p['name'] == 'serde_toon'))")
+          [ "v$version" = "$GITHUB_REF_NAME" ] || { echo "tag $GITHUB_REF_NAME is not v$version"; exit 1; }
+
+  verify:
+    needs: gate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy, rustfmt
+      - run: cargo fmt --all -- --check
+      - run: cargo clippy --all-targets -- -D warnings
+      - run: cargo test --all
+      - run: cargo doc --no-deps
+        env:
+          RUSTDOCFLAGS: -D warnings
+      # The crate must build from its own tarball, exactly as crates.io gets it.
+      - run: cargo package
+
+  # This crate never breaks its public API: a release is held to the
+  # non-breaking rules against the latest version on crates.io, even across
+  # 0.x minor bumps (which semver would otherwise treat as major and skip).
+  semver:
+    needs: gate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: obi1kenobi/cargo-semver-checks-action@v2
+        with:
+          release-type: minor
+
+  # Same recipe as the `msrv` job in ci.yml.
+  msrv:
+    needs: gate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - run: cargo generate-lockfile
+        env:
+          CARGO_RESOLVER_INCOMPATIBLE_RUST_VERSIONS: fallback
+      - run: cargo update -p serde --precise 1.0.228
+      - uses: dtolnay/rust-toolchain@1.70
+      - run: cargo check --lib
+
+  publish:
+    needs: [verify, semver, msrv]
+    runs-on: ubuntu-latest
+    # The `release` environment is the gate for publishing: crates.io trusts
+    # only this workflow in this environment (Trusted Publishing), and the
+    # environment can require an approval and only admit `v*` tags.
+    environment: release
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+      # A version that is already on crates.io is skipped, so re-running a tag is harmless.
+      - name: is this version already published
+        id: missing
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          code=$(curl -s -o /dev/null -w "%{http_code}" -A "serde_toon-release (https://github.com/${GITHUB_REPOSITORY})" "https://crates.io/api/v1/crates/serde_toon/$version")
+          case "$code" in
+            200) echo "serde_toon $version is already published"; echo "publish=false" >> "$GITHUB_OUTPUT" ;;
+            404) echo "serde_toon $version will be published"; echo "publish=true" >> "$GITHUB_OUTPUT" ;;
+            *) echo "crates.io answered $code for serde_toon $version"; exit 1 ;;
+          esac
+      - uses: dtolnay/rust-toolchain@stable
+        if: steps.missing.outputs.publish == 'true'
+      # Exchanges this job's GitHub OIDC token for a short-lived crates.io
+      # token. No long-lived registry token is stored anywhere.
+      - uses: rust-lang/crates-io-auth-action@v1
+        id: auth
+        if: steps.missing.outputs.publish == 'true'
+      - run: cargo publish
+        if: steps.missing.outputs.publish == 'true'
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ steps.auth.outputs.token }}
+
+  github-release:
+    needs: publish
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      # CHANGELOG.md is the one source of release notes: the tagged version's section, verbatim.
+      - name: release notes from the changelog
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          awk -v v="$version" '$0 ~ "^## \\[" v "\\]" {on=1; next} on && /^## \[/ {exit} on' CHANGELOG.md > notes.md
+          grep -q '[^[:space:]]' notes.md || { echo "CHANGELOG.md has no section for $version"; exit 1; }
+          printf '\n**Crate:** [serde_toon %s](https://crates.io/crates/serde_toon/%s) | [docs](https://docs.rs/serde_toon/%s)\n' \
+            "$version" "$version" "$version" >> notes.md
+      # Re-running a tag whose release already exists leaves it untouched.
+      - run: |
+          if gh release view "$GITHUB_REF_NAME" > /dev/null 2>&1; then
+            echo "release $GITHUB_REF_NAME already exists"
+          else
+            gh release create "$GITHUB_REF_NAME" --title "$GITHUB_REF_NAME" --notes-file notes.md --verify-tag
+          fi
+        env:
+          GH_TOKEN: ${{ github.token }}

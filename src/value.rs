@@ -48,8 +48,9 @@
 //! let value = Value::from(42);
 //!
 //! // Safe extraction with TryFrom
-//! let num: i64 = i64::try_from(value).unwrap();
+//! let num: i64 = i64::try_from(value)?;
 //! assert_eq!(num, 42);
+//! # Ok::<(), serde_toon::Error>(())
 //! ```
 //!
 //! ### Converting from Rust Types
@@ -62,11 +63,12 @@
 //! struct Point { x: i32, y: i32 }
 //!
 //! let point = Point { x: 10, y: 20 };
-//! let value: Value = to_value(&point).unwrap();
+//! let value: Value = to_value(&point)?;
 //!
 //! if let Value::Object(obj) = value {
 //!     assert_eq!(obj.len(), 2);
 //! }
+//! # Ok::<(), serde_toon::Error>(())
 //! ```
 
 use crate::ToonMap;
@@ -83,6 +85,22 @@ use std::fmt;
 /// - The structure isn't known at compile time
 /// - You need to manipulate TOON data generically
 /// - Building TOON structures programmatically
+///
+/// # Decoding numbers
+///
+/// When TOON text is decoded into a `Value`, integers that fit in `i64`
+/// become [`Number::Integer`], integers up to `u64::MAX` become
+/// [`Value::BigInt`], and larger integers, fractions and exponent numbers
+/// become [`Number::Float`]. Serializing a [`Value::BigInt`] writes the
+/// string `<digits>n`, not a number.
+///
+/// ```rust
+/// use serde_toon::{from_str, Number, Value};
+///
+/// assert_eq!(from_str::<Value>("42")?, Value::Number(Number::Integer(42)));
+/// assert!(from_str::<Value>("18446744073709551615")?.is_bigint());
+/// # Ok::<(), serde_toon::Error>(())
+/// ```
 ///
 /// # Examples
 ///
@@ -484,23 +502,25 @@ impl Value {
         }
     }
 
+    /// Returns `true` if this is a string that the encoder must quote as an
+    /// object field value with the default comma delimiter (TOON spec §7.2).
+    /// Non-string values are never quoted.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use serde_toon::Value;
+    ///
+    /// assert!(Value::from("a,b").needs_quotes());
+    /// assert!(Value::from("42").needs_quotes());
+    /// assert!(Value::from("-item").needs_quotes());
+    /// assert!(!Value::from("hello world").needs_quotes());
+    /// assert!(!Value::from(42).needs_quotes());
+    /// ```
     #[inline]
     pub fn needs_quotes(&self) -> bool {
         match self {
-            Value::String(s) => {
-                s.is_empty()
-                    || s.contains(':')
-                    || s.contains(',')
-                    || s.contains('\n')
-                    || s.contains('\t')
-                    || s.contains('|')
-                    || s.starts_with(' ')
-                    || s.ends_with(' ')
-                    || s == "true"
-                    || s == "false"
-                    || s == "null"
-                    || s.parse::<f64>().is_ok()
-            }
+            Value::String(s) => crate::lexical::value_needs_quotes(s, &crate::Delimiter::Comma),
             _ => false,
         }
     }
@@ -614,11 +634,25 @@ impl<'de> Deserialize<'de> for Value {
             }
 
             fn visit_u64<E>(self, value: u64) -> Result<Self::Value, E> {
-                if value <= i64::MAX as u64 {
-                    Ok(Value::Number(Number::Integer(value as i64)))
-                } else {
-                    Ok(Value::Number(Number::Float(value as f64)))
-                }
+                // Lossless: integers beyond i64 become BigInt, never f64.
+                Ok(match i64::try_from(value) {
+                    Ok(i) => Value::Number(Number::Integer(i)),
+                    Err(_) => Value::BigInt(BigInt::from(value)),
+                })
+            }
+
+            fn visit_i128<E>(self, value: i128) -> Result<Self::Value, E> {
+                Ok(match i64::try_from(value) {
+                    Ok(i) => Value::Number(Number::Integer(i)),
+                    Err(_) => Value::BigInt(BigInt::from(value)),
+                })
+            }
+
+            fn visit_u128<E>(self, value: u128) -> Result<Self::Value, E> {
+                Ok(match i64::try_from(value) {
+                    Ok(i) => Value::Number(Number::Integer(i)),
+                    Err(_) => Value::BigInt(BigInt::from(value)),
+                })
             }
 
             fn visit_f64<E>(self, value: f64) -> Result<Self::Value, E> {

@@ -1,17 +1,18 @@
 [package]
 name = "serde_toon"
-version = "0.2.0"
+version = "0.3.0"
 edition = "2021"
 authors = ["Hxphsts <hxphsts@kernelx.ai>"]
 description = "A Serde-compatible TOON (Token-Oriented Object Notation) serialization library"
 readme = "README.md"
-homepage = "https://github.com/hxphsts/serde_toon"
 repository = "https://github.com/hxphsts/serde_toon"
 documentation = "https://docs.rs/serde_toon"
 license = "MIT OR Apache-2.0"
 keywords = ["serde", "serialization", "toon", "llm", "token-efficient"]
 categories = ["encoding", "parser-implementations", "data-structures"]
 rust-version = "1.70"
+# Repository tooling that is not needed to build or test the crate.
+exclude = [".github/", ".rune.yml"]
 
 [package.metadata.docs.rs]
 all-features = true
@@ -25,9 +26,11 @@ num-bigint = { version = "0.4", features = ["serde"] }
 thiserror = "1.0"
 
 [dev-dependencies]
-serde_json = "1.0"
+serde_json = { version = "1.0", features = ["preserve_order"] }
 proptest = "1.4"
 criterion = "0.5"
+# Head-to-head benchmark against the official TOON crate (benches/vs_toon_format.rs).
+toon-format = { version = "0.5", default-features = false }
 
 [lib]
 name = "serde_toon"
@@ -57,6 +60,14 @@ path = "examples/custom_options.rs"
 name = "token_efficiency"
 path = "examples/token_efficiency.rs"
 
+[[example]]
+name = "strict_decoding"
+path = "examples/strict_decoding.rs"
+
 [[bench]]
 name = "serialization"
+harness = false
+
+[[bench]]
+name = "vs_toon_format"
 harness = false

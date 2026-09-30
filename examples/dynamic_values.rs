@@ -3,7 +3,7 @@
 //! Run with: cargo run --example dynamic_values
 
 use serde::{Deserialize, Serialize};
-use serde_toon::{to_string_pretty, to_value, toon, Value};
+use serde_toon::{to_string, to_value, toon, Value};
 use std::error::Error;
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -22,7 +22,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         "debug": true
     });
 
-    println!("Config as TOON:\n{}\n", to_string_pretty(&config)?);
+    println!("Config as TOON:\n{}\n", to_string(&config)?);
 
     // Access values dynamically
     if let Value::Object(obj) = &config {
@@ -47,7 +47,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     };
 
     let user_value = to_value(&user)?;
-    println!("User as Value:\n{}\n", to_string_pretty(&user_value)?);
+    println!("User as Value:\n{}\n", to_string(&user_value)?);
 
     // Runtime type checking
     println!("Type checks:");

@@ -34,7 +34,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     // Deserialize back to struct
     let users_back: Vec<User> = from_str(&toon)?;
     assert_eq!(users, users_back);
-    println!("✓ Round-trip successful");
+    println!("Round-trip successful");
 
     Ok(())
 }

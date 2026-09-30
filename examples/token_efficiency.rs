@@ -1,9 +1,12 @@
-//! TOON vs JSON token efficiency comparison.
+//! TOON vs JSON size comparison.
+//!
+//! Character counts are a rough proxy for tokens; the savings come mostly
+//! from the tabular form, which writes each field name once.
 //!
 //! Run with: cargo run --example token_efficiency
 
 use serde::{Deserialize, Serialize};
-use serde_toon::to_string_pretty;
+use serde_toon::to_string;
 use std::error::Error;
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -47,22 +50,26 @@ fn main() -> Result<(), Box<dyn Error>> {
         page: 1,
     };
 
-    // Serialize to JSON
+    // Serialize to JSON (pretty-printed, as often pasted into prompts)
     let json = serde_json::to_string_pretty(&response)?;
     println!("JSON ({} chars):\n{}\n", json.len(), json);
+    let compact = serde_json::to_string(&response)?;
+    println!("Compact JSON: {} chars\n", compact.len());
 
     // Serialize to TOON
-    let toon = to_string_pretty(&response)?;
+    let toon = to_string(&response)?;
     println!("TOON ({} chars):\n{}\n", toon.len(), toon);
 
-    // Calculate token savings
+    // Compare sizes
     let savings = ((json.len() - toon.len()) as f64 / json.len() as f64) * 100.0;
     println!(
-        "✓ Token savings: {:.1}% ({} → {} chars)",
+        "TOON is {:.1}% smaller ({} -> {} chars)",
         savings,
         json.len(),
         toon.len()
     );
+    let vs_compact = ((compact.len() - toon.len()) as f64 / compact.len() as f64) * 100.0;
+    println!("  vs compact JSON: {:.1}% smaller", vs_compact);
 
     Ok(())
 }

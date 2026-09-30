@@ -3,7 +3,7 @@
 //! Run with: cargo run --example tabular_arrays
 
 use serde::{Deserialize, Serialize};
-use serde_toon::{from_str, to_string_pretty};
+use serde_toon::{from_str, to_string};
 use std::error::Error;
 
 #[derive(Debug, Serialize, Deserialize, PartialEq)]
@@ -37,13 +37,13 @@ fn main() -> Result<(), Box<dyn Error>> {
     ];
 
     // Serialize to tabular format
-    let toon = to_string_pretty(&products)?;
+    let toon = to_string(&products)?;
     println!("TOON tabular output:\n{}\n", toon);
 
     // Deserialize back to verify
     let products_back: Vec<Product> = from_str(&toon)?;
     assert_eq!(products, products_back);
-    println!("✓ Round-trip successful");
+    println!("Round-trip successful");
 
     Ok(())
 }

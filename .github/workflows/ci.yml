@@ -2,8 +2,11 @@ name: CI
 
 on:
   push:
-    branches: [ main, master ]
+    branches: [ main ]
   pull_request:
+
+permissions:
+  contents: read
 
 env:
   CARGO_TERM_COLOR: always
@@ -49,3 +52,39 @@ jobs:
       - run: cargo doc --no-deps
         env:
           RUSTDOCFLAGS: -D warnings
+
+  semver:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      # Compares the public API against the latest release on crates.io.
+      # `release-type: minor` holds every release to the non-breaking rules,
+      # even across 0.x minor bumps (which semver would otherwise treat as
+      # major and skip): this crate never breaks its public API.
+      - uses: obi1kenobi/cargo-semver-checks-action@v2
+        with:
+          release-type: minor
+
+  msrv:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      # Cargo 1.70 predates MSRV-aware resolution (and the 2024 edition used by
+      # the newest releases of some dependencies), so resolve the lockfile with
+      # stable Cargo, preferring versions compatible with `rust-version`.
+      - uses: dtolnay/rust-toolchain@stable
+      - run: cargo generate-lockfile
+        env:
+          CARGO_RESOLVER_INCOMPATIBLE_RUST_VERSIONS: fallback
+      # serde >= 1.0.229 pins a serde_derive built on syn 3 (Rust 1.71+).
+      - run: cargo update -p serde --precise 1.0.228
+      - uses: dtolnay/rust-toolchain@1.70
+      - run: cargo check --lib
+
+  # The crate must build from its own tarball, as crates.io receives it.
+  package:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - run: cargo package

@@ -113,6 +113,7 @@ fn test_primitives() {
 }
 
 #[test]
+#[allow(deprecated)] // `with_length_marker` is deprecated and ignored
 fn test_options() {
     let user = User {
         id: 123,
@@ -239,6 +240,93 @@ fn test_numbers() {
     assert_roundtrip(&0.0f64);
     assert_roundtrip(&4.25f64);
     assert_roundtrip(&-5.75f64);
+}
+
+/// The exact TOON text for the values the round-trip tests above use. These
+/// run against the encoder alone, so they stay active while the round trips
+/// wait for the decoder rewrite.
+#[test]
+fn test_encoded_output() {
+    let user = User {
+        id: 123,
+        name: "Alice".to_string(),
+        active: true,
+        tags: vec!["admin".to_string(), "developer".to_string()],
+    };
+    assert_eq!(
+        to_string(&user).unwrap(),
+        "id: 123\nname: Alice\nactive: true\ntags[2]: admin,developer"
+    );
+    assert_eq!(
+        serde_toon::to_string_with_options(
+            &user,
+            ToonOptions::new().with_delimiter(Delimiter::Tab)
+        )
+        .unwrap(),
+        "id: 123\nname: Alice\nactive: true\ntags[2\t]: admin\tdeveloper"
+    );
+    assert_eq!(
+        serde_toon::to_string_with_options(
+            &user,
+            ToonOptions::new().with_delimiter(Delimiter::Pipe)
+        )
+        .unwrap(),
+        "id: 123\nname: Alice\nactive: true\ntags[2|]: admin|developer"
+    );
+
+    let order = Order {
+        order_id: 12345,
+        customer: User {
+            id: 123,
+            name: "Alice".to_string(),
+            active: true,
+            tags: vec!["vip".to_string()],
+        },
+        items: vec![
+            Product {
+                sku: "WIDGET-001".to_string(),
+                price: 29.99,
+                quantity: 2,
+            },
+            Product {
+                sku: "GADGET-002".to_string(),
+                price: 49.99,
+                quantity: 1,
+            },
+        ],
+        total: 109.97,
+    };
+    assert_eq!(
+        to_string_pretty(&order).unwrap(),
+        "order_id: 12345\n\
+         customer:\n  id: 123\n  name: Alice\n  active: true\n  tags[1]: vip\n\
+         items[2]{sku,price,quantity}:\n  WIDGET-001,29.99,2\n  GADGET-002,49.99,1\n\
+         total: 109.97"
+    );
+
+    #[derive(Serialize)]
+    struct Empty {}
+    assert_eq!(to_string(&Vec::<i32>::new()).unwrap(), "[]");
+    assert_eq!(to_string(&Empty {}).unwrap(), "");
+
+    let special = [
+        ("", r#""""#),
+        ("hello, world", r#""hello, world""#),
+        ("line1\nline2", r#""line1\nline2""#),
+        ("tab\there", r#""tab\there""#),
+        ("pipe|here", "pipe|here"),
+        (" leading space", r#"" leading space""#),
+        ("trailing space ", r#""trailing space ""#),
+        ("true", r#""true""#),
+        ("false", r#""false""#),
+        ("null", r#""null""#),
+        ("123", r#""123""#),
+        ("3.5", r#""3.5""#),
+        ("\"quoted\"", r#""\"quoted\"""#),
+    ];
+    for (input, expected) in special {
+        assert_eq!(to_string(input).unwrap(), expected, "{input:?}");
+    }
 }
 
 fn assert_roundtrip<T>(original: &T)
