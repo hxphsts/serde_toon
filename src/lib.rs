@@ -148,6 +148,11 @@ pub use value::{Number, Value};
 use serde::{Deserialize, Serialize};
 use std::io;
 
+// Compile and run the README's Rust examples as doctests.
+#[cfg(doctest)]
+#[doc = include_str!("../README.md")]
+struct ReadmeDoctests;
+
 /// The version of the [TOON specification](https://github.com/toon-format/spec)
 /// this crate targets.
 ///
