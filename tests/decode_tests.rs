@@ -54,7 +54,8 @@ fn strict_errors_report_their_line() {
         ("a:\n  b: 1\n      c: 2", 3),           // over-indented
         ("a:\n      b: 1", 2),                   // depth jump
         ("x: 1\ny: 2\nx: 3", 3),                 // duplicate key
-        ("items[3]:\n  - a\n\n  - b\n  - c", 3), // blank in span
+        ("items[3]:\n  - a\n\n  - b\n  - c", 4), // blank in span: line after the gap
+        ("t[2]{a}:\n  1\n\n# note\n\n  2", 6),   // gap of blanks and comments
         ("a: 1\n[2]: x,y", 2),                   // keyless header
         ("k[1]:\n  - [2]{x}:\n    1\n    2", 2), // keyless tabular item
         ("items[03]: a", 1),                     // leading zero

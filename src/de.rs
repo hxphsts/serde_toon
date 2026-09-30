@@ -185,10 +185,13 @@ impl<'de> Deserializer<'de> {
         let line = self.lines[self.pos];
         self.pos += 1;
         if line.after_blank && self.in_span && self.strict() {
+            // Report the line after the gap: it is what the context shows,
+            // and the gap may span several blank or comment lines.
+            let (number, col) = line.pos();
             return Err(Error::syntax_with_context(
-                line.number - 1,
-                1,
-                "blank line inside an array or keyed object",
+                number,
+                col,
+                "blank line before this line, inside an array or keyed object",
                 line.content,
                 Some("remove the blank line; blank lines are only allowed between fields"),
             ));

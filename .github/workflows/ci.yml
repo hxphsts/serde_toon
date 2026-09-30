@@ -55,7 +55,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       # Compares the public API against the latest release on crates.io.
+      # `release-type: minor` holds every release to the non-breaking rules,
+      # even across 0.x minor bumps (which semver would otherwise treat as
+      # major and skip): this crate never breaks its public API.
       - uses: obi1kenobi/cargo-semver-checks-action@v2
+        with:
+          release-type: minor
 
   msrv:
     runs-on: ubuntu-latest
