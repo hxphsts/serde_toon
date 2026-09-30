@@ -2,7 +2,7 @@
 //!
 //! Run with: cargo run --example macro
 
-use serde_toon::{to_string_pretty, toon, Value};
+use serde_toon::{to_string, toon, Value};
 use std::error::Error;
 
 fn main() -> Result<(), Box<dyn Error>> {
@@ -12,17 +12,17 @@ fn main() -> Result<(), Box<dyn Error>> {
     let text = toon!("Hello, TOON!");
 
     println!("Primitives:");
-    println!("  null:   {}", to_string_pretty(&null_val)?);
-    println!("  bool:   {}", to_string_pretty(&bool_val)?);
-    println!("  number: {}", to_string_pretty(&number)?);
-    println!("  text:   {}\n", to_string_pretty(&text)?);
+    println!("  null:   {}", to_string(&null_val)?);
+    println!("  bool:   {}", to_string(&bool_val)?);
+    println!("  number: {}", to_string(&number)?);
+    println!("  text:   {}\n", to_string(&text)?);
 
     let numbers = toon!([1, 2, 3, 4, 5]);
     let mixed = toon!([1, "two", true, null]);
 
     println!("Arrays:");
-    println!("  Numbers: {}", to_string_pretty(&numbers)?);
-    println!("  Mixed:   {}\n", to_string_pretty(&mixed)?);
+    println!("  Numbers: {}", to_string(&numbers)?);
+    println!("  Mixed:   {}\n", to_string(&mixed)?);
 
     let user = toon!({
         "id": 123,
@@ -32,7 +32,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     });
 
     println!("Objects:");
-    println!("{}\n", to_string_pretty(&user)?);
+    println!("{}\n", to_string(&user)?);
 
     let config = toon!({
         "app": {
@@ -49,7 +49,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     });
 
     println!("Nested structures:");
-    println!("{}\n", to_string_pretty(&config)?);
+    println!("{}\n", to_string(&config)?);
 
     let items = vec![
         toon!({"id": 1, "status": "active"}),
@@ -63,7 +63,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     });
 
     println!("Dynamic construction:");
-    println!("{}\n", to_string_pretty(&summary)?);
+    println!("{}\n", to_string(&summary)?);
 
     if let Value::Object(obj) = &config {
         if let Some(Value::Object(app)) = obj.get("app") {

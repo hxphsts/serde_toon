@@ -60,6 +60,10 @@ path = "examples/custom_options.rs"
 name = "token_efficiency"
 path = "examples/token_efficiency.rs"
 
+[[example]]
+name = "strict_decoding"
+path = "examples/strict_decoding.rs"
+
 [[bench]]
 name = "serialization"
 harness = false

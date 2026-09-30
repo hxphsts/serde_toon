@@ -1,5 +1,8 @@
 //! Customizing TOON output with ToonOptions.
 //!
+//! Every array header declares the delimiter in use (`[N]` comma, `[N<TAB>]`
+//! tab, `[N|]` pipe), so decoders need no configuration to read it back.
+//!
 //! Run with: cargo run --example custom_options
 
 use serde::{Deserialize, Serialize};
@@ -32,17 +35,21 @@ fn main() -> Result<(), Box<dyn Error>> {
     let default = serde_toon::to_string(&data)?;
     println!("{}\n", default);
 
-    // Tab delimiter (useful for TSV export)
+    // Tab delimiter (TSV-like rows; the header is `[2<TAB>]`)
     println!("Tab delimiter:");
     let tab_options = ToonOptions::new().with_delimiter(Delimiter::Tab);
     let tab_format = to_string_with_options(&data, tab_options)?;
     println!("{}\n", tab_format);
 
-    // Pipe delimiter (useful for markdown tables)
+    // Pipe delimiter (the header is `[2|]`)
     println!("Pipe delimiter:");
     let pipe_options = ToonOptions::new().with_delimiter(Delimiter::Pipe);
     let pipe_format = to_string_with_options(&data, pipe_options)?;
     println!("{}\n", pipe_format);
+
+    // Decoding reads the delimiter from the header.
+    let back: Vec<DataRow> = serde_toon::from_str(&pipe_format)?;
+    assert_eq!(back.len(), data.len());
 
     // Custom indentation (rows are indented one level under the header)
     println!("Four-space indentation:");
