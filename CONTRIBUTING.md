@@ -63,10 +63,10 @@ Publishing uses crates.io Trusted Publishing: the workflow's
 `rust-lang/crates-io-auth-action` step exchanges GitHub's OIDC token for a
 short-lived crates.io token, so no registry token is stored in the repository.
 
-- **crates.io**: on the `serde_toon` crate, Settings → Trusted Publishing →
-  Add → GitHub, with owner `hxphsts`, repository `serde_toon`, workflow
+- **crates.io**: on the `serde_toon` crate, Settings > Trusted Publishing >
+  Add > GitHub, with owner `hxphsts`, repository `serde_toon`, workflow
   `release.yml`, environment `release`.
-- **GitHub**: repository Settings → Environments → New environment named
+- **GitHub**: repository Settings > Environments > New environment named
   `release`. Under deployment branches and tags, allow only tags matching
   `v*`. Optionally add required reviewers to approve each publish.
 - A `CARGO_REGISTRY_TOKEN` secret is not needed; remove any old one.

@@ -43,7 +43,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     // Deserialize back to verify
     let products_back: Vec<Product> = from_str(&toon)?;
     assert_eq!(products, products_back);
-    println!("✓ Round-trip successful");
+    println!("Round-trip successful");
 
     Ok(())
 }

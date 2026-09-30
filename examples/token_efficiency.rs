@@ -63,7 +63,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     // Compare sizes
     let savings = ((json.len() - toon.len()) as f64 / json.len() as f64) * 100.0;
     println!(
-        "✓ TOON is {:.1}% smaller ({} → {} chars)",
+        "TOON is {:.1}% smaller ({} -> {} chars)",
         savings,
         json.len(),
         toon.len()

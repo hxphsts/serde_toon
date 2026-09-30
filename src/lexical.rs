@@ -104,7 +104,7 @@ pub(crate) fn value_needs_quotes(s: &str, delimiter: &Delimiter) -> bool {
 }
 
 /// Bytes whose presence anywhere in a string value forces quoting (§7.2),
-/// apart from the delimiter: controls U+0000–U+001F, `:`, `"`, `\`, and
+/// apart from the delimiter: controls U+0000-U+001F, `:`, `"`, `\`, and
 /// brackets and braces. A table keeps the per-byte check to one load.
 const QUOTE_BYTES: [bool; 256] = {
     let mut table = [false; 256];
@@ -124,7 +124,7 @@ const QUOTE_BYTES: [bool; 256] = {
 };
 
 /// §7.1: append `s` to `out` as a quoted string, escaping `\\`, `"`, `\n`,
-/// `\r`, `\t` and every other U+0000–U+001F control as lowercase `\uXXXX`.
+/// `\r`, `\t` and every other U+0000-U+001F control as lowercase `\uXXXX`.
 pub(crate) fn write_quoted(out: &mut String, s: &str) {
     out.reserve(s.len() + 2);
     out.push('"');

@@ -40,7 +40,7 @@
 //! | Boolean | `true`, `false` |
 //! | Integer | exact decimal of any width: `18446744073709551615` |
 //! | Float | shortest round-trip decimal without exponent when `1e-6 <= abs(n) < 1e21` (`1.5`, `1` for `1.0`, `0` for `-0.0`); otherwise exponent form `1e+21`, `1e-7` |
-//! | NaN, ±Infinity | `null` |
+//! | NaN, +/-Infinity | `null` |
 //! | String | unquoted when safe, otherwise `"quoted"` |
 //!
 //! A string value is quoted (§7.2) when it is empty; has leading or trailing
@@ -64,14 +64,14 @@
 //! Every array header declares its length, and every header declares the
 //! document delimiter (see below).
 //!
-//! **Inline** – all elements primitive:
+//! **Inline**: all elements primitive:
 //!
 //! ```text
 //! tags[3]: admin,ops,dev
 //! empty: []
 //! ```
 //!
-//! **Tabular** – all elements non-empty objects with the same keys, every
+//! **Tabular**: all elements non-empty objects with the same keys, every
 //! value primitive or a uniform nested object. The header lists the fields
 //! in the first element's order; uniform nested objects become nested field
 //! groups:
@@ -85,7 +85,7 @@
 //!   2,Bob,UK
 //! ```
 //!
-//! **List** – anything else. Objects put their first field on the hyphen
+//! **List**: anything else. Objects put their first field on the hyphen
 //! line; nested arrays use a keyless header:
 //!
 //! ```text
@@ -128,7 +128,7 @@
 //! | Tab | `[N<TAB>]` | `tags[3<TAB>]: a<TAB>b<TAB>c` |
 //! | Pipe | `[N\|]` | `tags[3\|]: a\|b\|c` |
 //!
-//! The same delimiter separates field names inside `{…}`. Strings containing
+//! The same delimiter separates field names inside `{...}`. Strings containing
 //! the chosen delimiter are quoted; other delimiter characters are safe.
 //!
 //! Length markers (`[#3]`) were removed in TOON v2 and are never emitted;

@@ -24,9 +24,9 @@
 //! | Rust / serde                                | TOON (JSON data model)                          |
 //! |---------------------------------------------|-------------------------------------------------|
 //! | `bool`                                      | `true` / `false`                                |
-//! | `i8`–`i128`, `u8`–`u128`                    | integer, written exactly in decimal             |
+//! | `i8`-`i128`, `u8`-`u128`                    | integer, written exactly in decimal             |
 //! | `f32`, `f64` (finite)                       | number, canonical decimal (§2); exponent form such as `1e+21` / `1e-7` outside `1e-6 <= abs(n) < 1e21`; `-0.0` as `0`; `f32` uses its own shortest digits |
-//! | `f32`, `f64` NaN / ±infinity                | `null`                                          |
+//! | `f32`, `f64` NaN / +/-infinity                | `null`                                          |
 //! | `char`, `&str`, `String`                    | string                                          |
 //! | `&[u8]` via `serialize_bytes`               | array of numbers                                |
 //! | `None`, `()`, unit struct                   | `null`                                          |

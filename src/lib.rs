@@ -117,7 +117,7 @@
 //!   validate untrusted or LLM-generated input.
 //! - [`DecodeOptions::lenient`] is the spec's non-strict mode.
 //! - [`DecodeOptions::compatible`] is lenient and also accepts the syntax
-//!   serde_toon 0.2 wrote (`[#N]` length markers, `key: [N]: …` headers,
+//!   serde_toon 0.2 wrote (`[#N]` length markers, `key: [N]: ...` headers,
 //!   `NaN`/`inf` tokens).
 //!
 //! ```rust

@@ -29,7 +29,7 @@
 //! See [`DecodeOptions`]: `strict` enforces every check of spec §14,
 //! `lenient` is the spec's non-strict mode, and `compatible` (the default,
 //! used by [`from_str`](crate::from_str)) additionally reads everything
-//! serde_toon 0.2 wrote — `[#N]` length markers, tab headers written as
+//! serde_toon 0.2 wrote: `[#N]` length markers, tab headers written as
 //! spaces (`[2    ]`), headers after a key's colon (`key: [2]: a,b`),
 //! `NaN`/`Infinity`/`inf` float tokens and the 0.2 enum layout.
 //!
@@ -878,7 +878,7 @@ impl<'a, 'de> de::VariantAccess<'de> for MapEnum<'a, 'de> {
 }
 
 // ---------------------------------------------------------------------------
-// Arrays (§9.1–§9.4)
+// Arrays (§9.1-§9.4)
 // ---------------------------------------------------------------------------
 
 /// Delimiter-separated cells of an inline array, row or entry row, split

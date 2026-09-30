@@ -13,8 +13,9 @@ serde_toon implements [TOON spec v4.1](https://github.com/toon-format/spec)
 (`serde_toon::SPEC_VERSION`) and passes all 538 official conformance fixtures
 (179 encode, 359 decode, spec tag v4.1.1).
 
-```text
-// JSON (serde_json::to_string_pretty): 191 characters
+JSON (`serde_json::to_string_pretty`), 191 characters:
+
+```json
 [
   {
     "id": 1,
@@ -29,8 +30,11 @@ serde_toon implements [TOON spec v4.1](https://github.com/toon-format/spec)
     "active": false
   }
 ]
+```
 
-// TOON (serde_toon::to_string): 89 characters
+TOON (`serde_toon::to_string`), 89 characters:
+
+```text
 [2]{id,name,email,active}:
   1,Alice,alice@example.com,true
   2,Bob,bob@example.com,false
@@ -133,9 +137,9 @@ label: \"true\"";
 
 - Uniform arrays of objects are tables; uniform nested objects become field
   groups (`customer{name,country}`), and maps of uniform objects become keyed
-  tables (`users[2:]{…}`).
+  tables (`users[2:]{...}`).
 - Numbers are canonical: `1.0` is `1`, `-0.0` is `0`, very large or small
-  floats use exponent form (`1e+21`, `1e-7`), and NaN/±infinity are `null`.
+  floats use exponent form (`1e+21`, `1e-7`), and NaN/+/-infinity are `null`.
   `u64`, `i128` and `u128` are written exactly.
 - Strings and keys are quoted only when needed (`"true"`, `"a,b"`, `"user-id"`).
 - Enums are externally tagged: `Unit`, `Variant: value`, or `Variant:` with
@@ -161,7 +165,7 @@ fn main() -> Result<(), serde_toon::Error> {
 
 The decoder drives serde's visitors directly over the input's lines, without
 an intermediate tree; `&str` fields borrow from the input when the value
-contains no escapes. It accepts full-line comments (`# …`), a byte-order mark
+contains no escapes. It accepts full-line comments (`# ...`), a byte-order mark
 and CRLF line endings; errors report line and column. It is property-tested
 not to panic on arbitrary input, and nesting is limited to 128 levels.
 

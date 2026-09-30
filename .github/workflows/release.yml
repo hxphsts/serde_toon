@@ -122,7 +122,7 @@ jobs:
           version="${GITHUB_REF_NAME#v}"
           awk -v v="$version" '$0 ~ "^## \\[" v "\\]" {on=1; next} on && /^## \[/ {exit} on' CHANGELOG.md > notes.md
           grep -q '[^[:space:]]' notes.md || { echo "CHANGELOG.md has no section for $version"; exit 1; }
-          printf '\n**Crate:** [serde_toon %s](https://crates.io/crates/serde_toon/%s) · [docs](https://docs.rs/serde_toon/%s)\n' \
+          printf '\n**Crate:** [serde_toon %s](https://crates.io/crates/serde_toon/%s) | [docs](https://docs.rs/serde_toon/%s)\n' \
             "$version" "$version" "$version" >> notes.md
       # Re-running a tag whose release already exists leaves it untouched.
       - run: |

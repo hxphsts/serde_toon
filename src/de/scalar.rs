@@ -63,7 +63,7 @@ pub(crate) enum Primitive<'a> {
 fn describe(text: &str) -> String {
     const MAX: usize = 40;
     match text.char_indices().nth(MAX) {
-        Some((i, _)) => format!("`{}…`", &text[..i]),
+        Some((i, _)) => format!("`{}...`", &text[..i]),
         None => format!("`{text}`"),
     }
 }

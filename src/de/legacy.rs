@@ -1,7 +1,7 @@
 //! serde_toon 0.2 compatibility that needs more than a lexical tweak.
 //!
 //! Only reachable in [`DecodeOptions::compatible`](crate::DecodeOptions::compatible)
-//! mode. The lexical compat forms (`[#N]`, `[N    ]`, `key: [N]: …`, `NaN`)
+//! mode. The lexical compat forms (`[#N]`, `[N    ]`, `key: [N]: ...`, `NaN`)
 //! live next to the spec rules they relax, each behind an `is_compatible()`
 //! check.
 //!

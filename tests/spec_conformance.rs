@@ -651,13 +651,13 @@ fn verdict(category: Category, results: Vec<CaseResult>) {
     }
     if !fixed.is_empty() {
         report.push_str(&format!(
-            "\nNOW PASSING — remove from known_failures ({KNOWN_FAILURES}):\n{}\n",
+            "\nNOW PASSING: remove from known_failures ({KNOWN_FAILURES}):\n{}\n",
             fixed.join("\n")
         ));
     }
     if !stale.is_empty() {
         report.push_str(&format!(
-            "\nUNKNOWN IDS in {KNOWN_FAILURES} (no such case — remove from known_failures):\n{}\n",
+            "\nUNKNOWN IDS in {KNOWN_FAILURES} (no such case; remove from known_failures):\n{}\n",
             stale.join("\n")
         ));
     }

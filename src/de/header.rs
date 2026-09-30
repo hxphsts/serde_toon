@@ -125,7 +125,7 @@ pub(crate) fn classify<'a>(
                     line.col_of(&content[key_end..]),
                     &format!("invalid array header: {msg}"),
                     line.content,
-                    Some("headers look like `key[N]: …`, `key[N]{a,b}:` or `key[N:]{a,b}:`"),
+                    Some("headers look like `key[N]: ...`, `key[N]{a,b}:` or `key[N:]{a,b}:`"),
                 ));
             }
             // Non-strict fall-through: a key-value line with a literal key.
@@ -173,7 +173,7 @@ fn quoted_end(s: &str) -> Option<usize> {
 }
 
 /// Parses a keyless header in value position (serde_toon 0.2 wrote
-/// `key: [N]: …`). Returns `None` if `value` is not a valid header.
+/// `key: [N]: ...`). Returns `None` if `value` is not a valid header.
 pub(crate) fn parse_legacy_value_header<'a>(
     value: &'a str,
     line: &Line<'a>,

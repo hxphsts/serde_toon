@@ -31,7 +31,7 @@ reports no breaking change. Documents written by 0.2 still decode with
 - Encoder: exact `u64`, `i128` and `u128` output.
 - Decoder: comments (`#`), a leading byte-order mark, CRLF line endings,
   keyed tabular objects, nested field groups, tab and pipe delimiters.
-- Decoder: zero-copy strings — `&str` and `Cow<str>` fields borrow from the
+- Decoder: zero-copy strings: `&str` and `Cow<str>` fields borrow from the
   input when the value contains no escape sequences.
 - Decoder: typed `i128`/`u128` targets decode exactly; `Value` decodes
   integers above `i64::MAX` (up to `u64::MAX`) as `Value::BigInt`.
@@ -50,8 +50,8 @@ reports no breaking change. Documents written by 0.2 still decode with
   `tags: [2]: a,b`); struct fields keep declaration order instead of being
   sorted; keys are quoted when §7.3 requires it (`"user-id": 1`); strings
   are quoted per §7.2, and also when they start with U+FEFF; nested arrays
-  in list items are written `- [M]: …`.
-- **Numbers are canonical** (§2): NaN and ±infinity are written as `null`,
+  in list items are written `- [M]: ...`.
+- **Numbers are canonical** (§2): NaN and +/-infinity are written as `null`,
   `-0.0` as `0`, and exponent form is used outside `1e-6 <= |n| < 1e21`
   (`1e+21`, `1e-7`).
 - Tabular form is used whenever the spec requires it, including rows with
@@ -112,7 +112,7 @@ Against the official `toon-format` 0.5.0 crate (`benches/vs_toon_format.rs`):
 
 - **Reading old data needs no change.** `from_str`, `from_slice` and
   `from_reader` use `DecodeOptions::compatible()`, which still accepts what
-  0.2 wrote: `[#N]` length markers, four-space tab headers, `key: [N]: …`
+  0.2 wrote: `[#N]` length markers, four-space tab headers, `key: [N]: ...`
   headers, `NaN`/`inf`/`-inf` tokens and the 0.2 root enum layout
   (`Rect:w: 2`). 87 golden documents produced by 0.2.0 are checked in
   `tests/legacy_compat.rs`.

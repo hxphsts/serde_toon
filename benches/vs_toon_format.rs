@@ -115,7 +115,7 @@ fn bench_strings(c: &mut Criterion) {
     let mut g = c.benchmark_group("strings");
     let data = Wrapper {
         items: (0..1_000)
-            .map(|i| format!("line {i}: \"quoted\", with commas, tabs\tand unicode — ✓ {i}"))
+            .map(|i| format!("line {i}: \"quoted\", with commas, tabs\tand unicode é ✓ {i}"))
             .collect::<Vec<_>>(),
     };
     let ours = serde_toon::to_string(&data).unwrap();

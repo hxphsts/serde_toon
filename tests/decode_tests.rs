@@ -590,7 +590,7 @@ fn legacy_syntax_is_confined_to_compatible_mode() {
     assert!(strict::<Vec<i32>>("[#2]: 1,2").is_err());
     let err = lenient::<Vec<i32>>("[#2]: 1,2").unwrap_err();
     assert!(err.to_string().contains("compatible"), "{err}");
-    // Spec modes read `key: [2]: …` as a string value.
+    // Spec modes read `key: [2]: ...` as a string value.
     let v: Map = strict("xs: [2]: 1,2").unwrap();
     assert_eq!(v["xs"], Value::String("[2]: 1,2".into()));
 }
