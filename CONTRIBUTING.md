@@ -59,9 +59,9 @@ before every check has passed.
 
 ### One-time setup
 
-Publishing uses [crates.io Trusted Publishing](https://crates.io/docs/trusted-publishing):
-the workflow exchanges GitHub's OIDC token for a short-lived crates.io token,
-so no registry token is stored in the repository.
+Publishing uses crates.io Trusted Publishing: the workflow's
+`rust-lang/crates-io-auth-action` step exchanges GitHub's OIDC token for a
+short-lived crates.io token, so no registry token is stored in the repository.
 
 - **crates.io**: on the `serde_toon` crate, Settings → Trusted Publishing →
   Add → GitHub, with owner `hxphsts`, repository `serde_toon`, workflow
