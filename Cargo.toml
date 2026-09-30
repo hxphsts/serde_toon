@@ -1,17 +1,18 @@
 [package]
 name = "serde_toon"
-version = "0.2.0"
+version = "0.3.0"
 edition = "2021"
 authors = ["Hxphsts <hxphsts@kernelx.ai>"]
 description = "A Serde-compatible TOON (Token-Oriented Object Notation) serialization library"
 readme = "README.md"
-homepage = "https://github.com/hxphsts/serde_toon"
 repository = "https://github.com/hxphsts/serde_toon"
 documentation = "https://docs.rs/serde_toon"
 license = "MIT OR Apache-2.0"
 keywords = ["serde", "serialization", "toon", "llm", "token-efficient"]
 categories = ["encoding", "parser-implementations", "data-structures"]
 rust-version = "1.70"
+# Repository tooling that is not needed to build or test the crate.
+exclude = [".github/", ".rune.yml"]
 
 [package.metadata.docs.rs]
 all-features = true
